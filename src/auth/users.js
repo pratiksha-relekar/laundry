@@ -204,6 +204,12 @@ export function mapFirebaseAuthError(err) {
         field: 'form',
         error: 'Pop-up was blocked. Please allow pop-ups and try again.',
       }
+    case 'auth/unauthorized-domain':
+      return {
+        field: 'form',
+        error:
+          'This website domain is not authorized in Firebase. Add laundry-five-pied.vercel.app in Firebase Authentication settings.',
+      }
     case 'auth/account-exists-with-different-credential':
       return {
         field: 'form',
