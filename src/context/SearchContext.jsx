@@ -1,0 +1,231 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+import { products as CATALOG_PRODUCTS } from '../data/products'
+import { categoryMap } from '../data/categories'
+import { useUserAds } from './UserAdsContext'
+
+// =====================================================================
+// SearchContext (also handles the budget filter)
+// ---------------------------------------------------------------------
+//   query           — live input value as the user types
+//   submittedQuery  — value last committed (Enter / button / pick)
+//   recent          — recently-submitted queries (persisted)
+//   submit          — commit a query and append to `recent`
+//   clearSearch     — wipe both query and submittedQuery
+//   removeRecent    — drop one item from `recent`
+//   clearRecent     — empty the recents list entirely
+//
+//   minPrice        — applied lower bound (null = no bound)
+//   maxPrice        — applied upper bound (null = no bound)
+//   applyBudget     — set { min, max } (each may be null)
+//   clearBudget     — reset both to null
+//
+//   isFiltering     — true when any filter (text or budget) is active
+//   allProducts     — catalog products + the current user's posted ads
+//   allProductsByCategory — same, grouped by category id
+//   filteredProducts — derived list with all active filters applied
+// =====================================================================
+
+const SearchContext = createContext(null)
+const STORAGE_KEY = 'laundry.recentSearches'
+const MAX_RECENT = 8
+
+// Drop these from the user's query so phrases like "washing machine
+// by Pratiksha" still match a listing titled "Washing Machine" sold by
+// "Pratiksha" — the word "by" shouldn't have to appear anywhere.
+const STOPWORDS = new Set([
+  'a', 'an', 'and', 'at', 'by', 'for', 'from', 'in', 'is', 'of',
+  'on', 'or', 'the', 'to', 'with',
+])
+
+function readStored() {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENT) : []
+  } catch {
+    return []
+  }
+}
+
+// Builds a single lower-cased haystack string from all the fields we want
+// to search across (title, brand, seller, description, category, location).
+function haystackFor(product) {
+  const catName = categoryMap[product.category]?.name || ''
+  return [
+    product.title,
+    product.brand,
+    product.location,
+    product.category,
+    catName,
+    product.seller?.name,
+    product.description,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function matchesText(product, q) {
+  if (!q) return true
+  const tokens = q
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t && !STOPWORDS.has(t))
+  if (tokens.length === 0) return true
+  const hay = haystackFor(product)
+  // All non-stopword tokens must appear somewhere in the haystack.
+  return tokens.every((t) => hay.includes(t))
+}
+
+function matchesBudget(product, minPrice, maxPrice) {
+  if (minPrice != null && product.price < minPrice) return false
+  if (maxPrice != null && product.price > maxPrice) return false
+  return true
+}
+
+export function SearchProvider({ children }) {
+  const { ads: userAds } = useUserAds()
+
+  const [query, setQuery] = useState('')
+  const [submittedQuery, setSubmittedQuery] = useState('')
+  const [recent, setRecent] = useState(readStored)
+  const [minPrice, setMinPrice] = useState(null)
+  const [maxPrice, setMaxPrice] = useState(null)
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(recent))
+    } catch {
+      // ignore quota / privacy-mode errors
+    }
+  }, [recent])
+
+  const submit = useCallback(
+    (rawValue) => {
+      const value = (rawValue ?? query).trim()
+      setQuery(value)
+      setSubmittedQuery(value)
+      if (!value) return
+      setRecent((prev) => {
+        const lower = value.toLowerCase()
+        const without = prev.filter((x) => x.toLowerCase() !== lower)
+        return [value, ...without].slice(0, MAX_RECENT)
+      })
+    },
+    [query]
+  )
+
+  const clearSearch = useCallback(() => {
+    setQuery('')
+    setSubmittedQuery('')
+  }, [])
+
+  const removeRecent = useCallback((value) => {
+    setRecent((prev) => prev.filter((x) => x !== value))
+  }, [])
+
+  const clearRecent = useCallback(() => setRecent([]), [])
+
+  const applyBudget = useCallback((min, max) => {
+    setMinPrice(min == null || Number.isNaN(min) ? null : min)
+    setMaxPrice(max == null || Number.isNaN(max) ? null : max)
+  }, [])
+
+  const clearBudget = useCallback(() => {
+    setMinPrice(null)
+    setMaxPrice(null)
+  }, [])
+
+  const clearAllFilters = useCallback(() => {
+    setQuery('')
+    setSubmittedQuery('')
+    setMinPrice(null)
+    setMaxPrice(null)
+  }, [])
+
+  const isFiltering =
+    submittedQuery.trim() !== '' || minPrice != null || maxPrice != null
+
+  // User-posted ads sit on top so the seller sees their freshly listed
+  // item appear first on the home grid and in search.
+  const allProducts = useMemo(
+    () => [...userAds, ...CATALOG_PRODUCTS],
+    [userAds]
+  )
+
+  const allProductsByCategory = useMemo(() => {
+    const map = {}
+    for (const p of allProducts) {
+      if (!p.category) continue
+      if (!map[p.category]) map[p.category] = []
+      map[p.category].push(p)
+    }
+    return map
+  }, [allProducts])
+
+  const filteredProducts = useMemo(() => {
+    if (!isFiltering) return allProducts
+    const q = submittedQuery.trim()
+    return allProducts.filter(
+      (p) => matchesText(p, q) && matchesBudget(p, minPrice, maxPrice)
+    )
+  }, [submittedQuery, minPrice, maxPrice, isFiltering, allProducts])
+
+  const value = useMemo(
+    () => ({
+      query,
+      setQuery,
+      submittedQuery,
+      submit,
+      clearSearch,
+      recent,
+      removeRecent,
+      clearRecent,
+      minPrice,
+      maxPrice,
+      applyBudget,
+      clearBudget,
+      clearAllFilters,
+      isFiltering,
+      allProducts,
+      allProductsByCategory,
+      filteredProducts,
+    }),
+    [
+      query,
+      submittedQuery,
+      submit,
+      clearSearch,
+      recent,
+      removeRecent,
+      clearRecent,
+      minPrice,
+      maxPrice,
+      applyBudget,
+      clearBudget,
+      clearAllFilters,
+      isFiltering,
+      allProducts,
+      allProductsByCategory,
+      filteredProducts,
+    ]
+  )
+
+  return <SearchContext.Provider value={value}>{children}</SearchContext.Provider>
+}
+
+export function useSearch() {
+  const ctx = useContext(SearchContext)
+  if (!ctx) {
+    throw new Error('useSearch must be used inside a SearchProvider')
+  }
+  return ctx
+}
