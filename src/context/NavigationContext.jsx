@@ -22,6 +22,11 @@ import {
 //   'sell'            — post-an-ad / "become a seller" form
 //   'admin-login'     — admin sign-in screen
 //   'admin-dashboard' — admin control panel (products, users, reviews…)
+//   'admin-products'  — admin products & categories management
+//   'admin-users'     — admin user directory (registered accounts)
+//   'admin-reviews'   — admin review moderation (product + seller reviews)
+//   'admin-analytics' — admin marketplace analytics overview
+//   'admin-settings'  — admin account, password and preferences
 // =====================================================================
 
 const NavigationContext = createContext(null)
@@ -93,6 +98,31 @@ export function NavigationProvider({ children }) {
     scrollTop()
   }, [])
 
+  const goAdminProducts = useCallback(() => {
+    setView('admin-products')
+    scrollTop()
+  }, [])
+
+  const goAdminUsers = useCallback(() => {
+    setView('admin-users')
+    scrollTop()
+  }, [])
+
+  const goAdminReviews = useCallback(() => {
+    setView('admin-reviews')
+    scrollTop()
+  }, [])
+
+  const goAdminAnalytics = useCallback(() => {
+    setView('admin-analytics')
+    scrollTop()
+  }, [])
+
+  const goAdminSettings = useCallback(() => {
+    setView('admin-settings')
+    scrollTop()
+  }, [])
+
   // Treat the browser Back button as "go to home" for any non-home view.
   useEffect(() => {
     function handlePop() {
@@ -118,6 +148,11 @@ export function NavigationProvider({ children }) {
       goSell,
       goAdminLogin,
       goAdminDashboard,
+      goAdminProducts,
+      goAdminUsers,
+      goAdminReviews,
+      goAdminAnalytics,
+      goAdminSettings,
     }),
     [
       view,
@@ -133,6 +168,11 @@ export function NavigationProvider({ children }) {
       goSell,
       goAdminLogin,
       goAdminDashboard,
+      goAdminProducts,
+      goAdminUsers,
+      goAdminReviews,
+      goAdminAnalytics,
+      goAdminSettings,
     ]
   )
 

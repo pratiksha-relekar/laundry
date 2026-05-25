@@ -14,8 +14,13 @@ import ChatsPage from './ChatsPage'
 import MyAdsPage from './MyAdsPage'
 import AccountPage from './AccountPage'
 import SellPage from './SellPage'
-import AdminLoginPage from './AdminLoginPage'
-import AdminDashboardPage from './AdminDashboardPage'
+import AdminLoginPage from './admin/AdminLoginPage'
+import AdminDashboardPage from './admin/AdminDashboardPage'
+import AdminProductsPage from './admin/AdminProductsPage'
+import AdminUsersPage from './admin/AdminUsersPage'
+import AdminReviewsPage from './admin/AdminReviewsPage'
+import AdminAnalyticsPage from './admin/AdminAnalyticsPage'
+import AdminSettingsPage from './admin/AdminSettingsPage'
 import { useSearch } from './context/SearchContext'
 import { useNavigation } from './context/NavigationContext'
 import { useAdmin } from './context/AdminContext'
@@ -31,7 +36,15 @@ const SECONDARY_VIEWS = new Set([
   'sell',
 ])
 
-const ADMIN_VIEWS = new Set(['admin-login', 'admin-dashboard'])
+const ADMIN_VIEWS = new Set([
+  'admin-login',
+  'admin-dashboard',
+  'admin-products',
+  'admin-users',
+  'admin-reviews',
+  'admin-analytics',
+  'admin-settings',
+])
 
 export default function DesktopView() {
   const { isFiltering, submittedQuery, allProductsByCategory } = useSearch()
@@ -43,15 +56,18 @@ export default function DesktopView() {
   // header / footer / sidebar / bottom bar.
   if (onAdmin) {
     if (view === 'admin-login') return <AdminLoginPage />
-    if (view === 'admin-dashboard') {
-      if (!isAdmin) {
-        // Guard the dashboard so a direct nav with no session bounces
-        // back to the admin sign-in screen.
-        setTimeout(goAdminLogin, 0)
-        return <AdminLoginPage />
-      }
-      return <AdminDashboardPage />
+    // Every other admin route requires an authenticated admin session.
+    if (!isAdmin) {
+      // Guard so a direct nav with no session bounces back to login.
+      setTimeout(goAdminLogin, 0)
+      return <AdminLoginPage />
     }
+    if (view === 'admin-dashboard') return <AdminDashboardPage />
+    if (view === 'admin-products') return <AdminProductsPage />
+    if (view === 'admin-users') return <AdminUsersPage />
+    if (view === 'admin-reviews') return <AdminReviewsPage />
+    if (view === 'admin-analytics') return <AdminAnalyticsPage />
+    if (view === 'admin-settings') return <AdminSettingsPage />
   }
 
   const onDetails = view === 'details'

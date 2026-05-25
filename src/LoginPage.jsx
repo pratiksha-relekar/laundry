@@ -19,11 +19,11 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
     setErrors({})
-    const result = login({ email, password })
+    const result = await login({ email, password })
     if (!result.ok) {
       setErrors({ [result.field || 'form']: result.error })
       setSubmitting(false)
@@ -33,9 +33,15 @@ export default function LoginPage() {
     goHome()
   }
 
-  const handleGoogle = () => {
+  const handleGoogle = async () => {
     setErrors({})
-    loginGoogle()
+    setSubmitting(true)
+    const result = await loginGoogle()
+    setSubmitting(false)
+    if (!result.ok) {
+      setErrors({ [result.field || 'form']: result.error })
+      return
+    }
     goHome()
   }
 

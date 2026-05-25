@@ -1,6 +1,7 @@
 import { useAdmin } from '../context/AdminContext'
 import { useNavigation } from '../context/NavigationContext'
 import { useTheme } from '../context/ThemeContext'
+import AdminLogo, { AdminWordmark } from '../admin/AdminLogo'
 import {
   BarChartIcon,
   GridIcon,
@@ -8,7 +9,6 @@ import {
   MoonIcon,
   PackageIcon,
   SettingsIcon,
-  ShieldIcon,
   StarIcon,
   SunIcon,
   UsersIcon,
@@ -20,16 +20,28 @@ import {
 // coming after this dashboard.
 const NAV_ITEMS = [
   { key: 'admin-dashboard', label: 'Dashboard', icon: GridIcon },
-  { key: 'admin-products', label: 'Products', icon: PackageIcon, soon: true },
-  { key: 'admin-users', label: 'Users', icon: UsersIcon, soon: true },
-  { key: 'admin-reviews', label: 'Reviews', icon: StarIcon, soon: true },
-  { key: 'admin-analytics', label: 'Analytics', icon: BarChartIcon, soon: true },
-  { key: 'admin-settings', label: 'Settings', icon: SettingsIcon, soon: true },
+  { key: 'admin-products', label: 'Products', icon: PackageIcon },
+  { key: 'admin-users', label: 'Users', icon: UsersIcon },
+  { key: 'admin-reviews', label: 'Reviews', icon: StarIcon },
+  { key: 'admin-analytics', label: 'Analytics', icon: BarChartIcon },
+  { key: 'admin-settings', label: 'Settings', icon: SettingsIcon },
 ]
 
 export default function AdminLayout({ title, subtitle, children }) {
-  const { admin, logout } = useAdmin()
-  const { view, goAdminDashboard, goLogin } = useNavigation()
+  const { admin, profile, logout } = useAdmin()
+  const displayName = profile?.name || admin?.name || 'Admin'
+  const displayRole = profile?.role || 'Super admin'
+  const avatarInitial = (displayName || 'A').trim().charAt(0).toUpperCase()
+  const {
+    view,
+    goAdminDashboard,
+    goAdminProducts,
+    goAdminUsers,
+    goAdminReviews,
+    goAdminAnalytics,
+    goAdminSettings,
+    goLogin,
+  } = useNavigation()
   const { isDark, toggleTheme } = useTheme()
 
   const handleLogout = () => {
@@ -42,17 +54,12 @@ export default function AdminLayout({ title, subtitle, children }) {
       <aside className="admin-sidebar">
         <button
           type="button"
-          className="admin-brand"
+          className="admin-brand admin-brand-olx"
           onClick={goAdminDashboard}
           aria-label="Admin home"
         >
-          <span className="admin-brand-mark">
-            <ShieldIcon size={20} />
-          </span>
-          <span className="admin-brand-text">
-            <span className="admin-brand-name">Laundry</span>
-            <span className="admin-brand-sub">Admin Panel</span>
-          </span>
+          <AdminLogo size={40} className="admin-brand-logo" />
+          <AdminWordmark />
         </button>
 
         <nav className="admin-nav">
@@ -70,6 +77,11 @@ export default function AdminLayout({ title, subtitle, children }) {
                 onClick={() => {
                   if (isDisabled) return
                   if (item.key === 'admin-dashboard') goAdminDashboard()
+                  else if (item.key === 'admin-products') goAdminProducts()
+                  else if (item.key === 'admin-users') goAdminUsers()
+                  else if (item.key === 'admin-reviews') goAdminReviews()
+                  else if (item.key === 'admin-analytics') goAdminAnalytics()
+                  else if (item.key === 'admin-settings') goAdminSettings()
                 }}
                 aria-disabled={isDisabled}
               >
@@ -111,13 +123,19 @@ export default function AdminLayout({ title, subtitle, children }) {
               {isDark ? <SunIcon size={18} /> : <MoonIcon size={18} />}
             </button>
 
-            <div className="admin-user">
-              <span className="admin-user-avatar">A</span>
+            <button
+              type="button"
+              className="admin-user admin-user-btn"
+              onClick={goAdminSettings}
+              aria-label="Open admin settings"
+              title="Open settings"
+            >
+              <span className="admin-user-avatar">{avatarInitial}</span>
               <span className="admin-user-meta">
-                <span className="admin-user-name">{admin?.name || 'Admin'}</span>
-                <span className="admin-user-role">Super admin</span>
+                <span className="admin-user-name">{displayName}</span>
+                <span className="admin-user-role">{displayRole}</span>
               </span>
-            </div>
+            </button>
           </div>
         </header>
 
