@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react'
 import { useAuth } from './context/AuthContext'
 import { useNavigation } from './context/NavigationContext'
 import { useUserAds } from './context/UserAdsContext'
+import { useWishlist } from './context/WishlistContext'
 import {
   ArrowLeftIcon,
   EditIcon,
   EyeStatsIcon,
   HeartIcon,
+  PackageIcon,
   PlusIcon,
   TrashIcon,
   UserIcon,
@@ -79,8 +81,9 @@ function MyAdRow({ ad, onOpen, onDelete }) {
 
 export default function MyAdsPage() {
   const { user } = useAuth()
-  const { goHome, goLogin, goSell, openProduct } = useNavigation()
+  const { goHome, goLogin, goSell, goWishlist, openProduct } = useNavigation()
   const { ads, removeAd } = useUserAds()
+  const { count: wishlistCount } = useWishlist()
 
   const [tab, setTab] = useState('all')
 
@@ -140,6 +143,28 @@ export default function MyAdsPage() {
           </div>
           <button type="button" className="myads-post" onClick={goSell}>
             <PlusIcon size={16} /> Post a new ad
+          </button>
+        </div>
+
+        <div className="myads-stats" aria-label="Account summary">
+          <div className="myads-stat">
+            <PackageIcon size={18} />
+            <div>
+              <strong>{counts.all}</strong>
+              <span>Listing{counts.all === 1 ? '' : 's'}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="myads-stat myads-stat-link"
+            onClick={goWishlist}
+            aria-label={`Wishlist — ${wishlistCount} saved`}
+          >
+            <HeartIcon size={18} filled={wishlistCount > 0} />
+            <div>
+              <strong>{wishlistCount}</strong>
+              <span>Saved</span>
+            </div>
           </button>
         </div>
 

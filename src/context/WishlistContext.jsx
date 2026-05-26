@@ -6,73 +6,105 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { productMap } from '../data/products'
+import { useAuth } from './AuthContext'
+import { useProducts } from './ProductsContext'
+import {
+  addToWishlist,
+  removeFromWishlist,
+  subscribeToUserDoc,
+} from '../auth/users'
 
 // =====================================================================
 // WishlistContext
 // ---------------------------------------------------------------------
-// Persists the set of product ids the user has "hearted" in localStorage.
-// Components subscribe via useWishlist() and either flip the heart icon
-// (`toggle`) or render the saved list (`items` / `count`).
+// Persists the set of product ids the user has "hearted" in Firestore
+// on `users/{uid}.wishlist`. The in-memory list is cleared on logout so
+// the next account never sees the previous user's saved items.
 // =====================================================================
 
 const WishlistContext = createContext(null)
-const STORAGE_KEY = 'laundry:wishlist'
-
-function readStored() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
 
 export function WishlistProvider({ children }) {
-  const [ids, setIds] = useState(readStored)
+  const { user } = useAuth()
+  const { productMap } = useProducts()
+  const uid = user?.id || null
+  const [ids, setIds] = useState([])
+  // When logged out, never show the previous account's wishlist in memory.
+  const activeIds = uid ? ids : []
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ids))
-    } catch {
-      /* storage disabled — ignore */
-    }
-  }, [ids])
-
-  const toggle = useCallback((productId) => {
-    setIds((prev) =>
-      prev.includes(productId)
-        ? prev.filter((x) => x !== productId)
-        : [productId, ...prev]
+    if (!uid) return undefined
+    const unsubscribe = subscribeToUserDoc(
+      uid,
+      (profile) => {
+        setIds(Array.isArray(profile?.wishlist) ? profile.wishlist : [])
+      },
+      () => setIds([])
     )
-  }, [])
+    return unsubscribe
+  }, [uid])
 
-  const remove = useCallback((productId) => {
-    setIds((prev) => prev.filter((x) => x !== productId))
-  }, [])
+  const toggle = useCallback(
+    async (productId) => {
+      if (!uid || !productId) return
+      const inList = activeIds.includes(productId)
+      setIds((prev) =>
+        inList
+          ? prev.filter((x) => x !== productId)
+          : [productId, ...prev]
+      )
+      try {
+        if (inList) await removeFromWishlist(uid, productId)
+        else await addToWishlist(uid, productId)
+      } catch (err) {
+        console.warn('[wishlist] toggle failed:', err?.message)
+        // Revert on failure.
+        setIds((prev) =>
+          inList
+            ? [...prev, productId]
+            : prev.filter((x) => x !== productId)
+        )
+      }
+    },
+    [uid, activeIds]
+  )
+
+  const remove = useCallback(
+    async (productId) => {
+      if (!uid || !productId) return
+      setIds((prev) => prev.filter((x) => x !== productId))
+      try {
+        await removeFromWishlist(uid, productId)
+      } catch (err) {
+        console.warn('[wishlist] remove failed:', err?.message)
+      }
+    },
+    [uid]
+  )
 
   const clear = useCallback(() => setIds([]), [])
 
-  const isInWishlist = useCallback((productId) => ids.includes(productId), [ids])
+  const isInWishlist = useCallback(
+    (productId) => activeIds.includes(productId),
+    [activeIds]
+  )
 
-  // Resolve ids to products in insertion order, skipping stale ids.
   const items = useMemo(
-    () => ids.map((id) => productMap[id]).filter(Boolean),
-    [ids]
+    () => activeIds.map((id) => productMap[id]).filter(Boolean),
+    [activeIds, productMap]
   )
 
   const value = useMemo(
     () => ({
-      ids,
+      ids: activeIds,
       items,
-      count: ids.length,
+      count: activeIds.length,
       toggle,
       remove,
       clear,
       isInWishlist,
     }),
-    [ids, items, toggle, remove, clear, isInWishlist]
+    [activeIds, items, toggle, remove, clear, isInWishlist]
   )
 
   return (

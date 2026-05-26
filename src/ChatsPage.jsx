@@ -33,7 +33,11 @@ function formatTime(ts) {
 }
 
 function ChatListItem({ chat, active, onClick }) {
-  const initial = (chat.sellerName || 'S').trim().charAt(0).toUpperCase()
+  const initial = (chat.otherName || chat.otherEmail || 'U')
+    .trim()
+    .charAt(0)
+    .toUpperCase()
+  const roleLabel = chat.iAmBuyer ? 'Seller' : 'Buyer'
   return (
     <button
       type="button"
@@ -45,8 +49,13 @@ function ChatListItem({ chat, active, onClick }) {
       </span>
       <span className="chat-list-body">
         <span className="chat-list-row1">
-          <span className="chat-list-name">{chat.sellerName}</span>
-          <span className="chat-list-time">{formatTime(chat.lastTime)}</span>
+          <span className="chat-list-name">
+            {chat.otherName || chat.otherEmail}
+            <span className="chat-list-role">{roleLabel}</span>
+          </span>
+          <span className="chat-list-time">
+            {chat.lastTime ? formatTime(chat.lastTime) : ''}
+          </span>
         </span>
         <span className="chat-list-row2">
           <span className="chat-list-product">{chat.productTitle}</span>
@@ -66,13 +75,13 @@ function ChatThread({ chat, onBack, onSend, onDelete }) {
   const [text, setText] = useState('')
   const listRef = useRef(null)
 
-  // Auto-scroll to the latest message whenever the thread or its
-  // message list changes.
+  const messageCount = chat?.messages?.length ?? 0
+
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight
     }
-  }, [chat?.id, chat?.messages?.length])
+  }, [chat?.id, messageCount])
 
   if (!chat) {
     return (
@@ -111,7 +120,12 @@ function ChatThread({ chat, onBack, onSend, onDelete }) {
           loading="lazy"
         />
         <div className="chat-thread-info">
-          <div className="chat-thread-name">{chat.sellerName}</div>
+          <div className="chat-thread-name">
+            {chat.otherName || chat.otherEmail}
+            <span className="chat-thread-role">
+              {chat.iAmBuyer ? 'Seller' : 'Buyer'}
+            </span>
+          </div>
           <div className="chat-thread-product">
             {chat.productTitle}
             <span className="chat-thread-price">{formatPrice(chat.productPrice)}</span>
@@ -130,14 +144,18 @@ function ChatThread({ chat, onBack, onSend, onDelete }) {
       <div className="chat-thread-list" ref={listRef}>
         {chat.messages.length === 0 ? (
           <div className="chat-thread-empty-state">
-            Say hi to {chat.sellerName.split(' ')[0]} — they usually reply within an hour.
+            Say hi to {(chat.otherName || 'them').split(' ')[0]} — messages
+            sync live for both of you.
           </div>
         ) : (
           chat.messages.map((m) => (
             <div
               key={m.id}
-              className={`chat-bubble chat-bubble-${m.from === 'me' ? 'me' : 'them'}`}
+              className={`chat-bubble chat-bubble-${m.mine ? 'me' : 'them'}`}
             >
+              {!m.mine && m.fromName && (
+                <span className="chat-bubble-from">{m.fromName}</span>
+              )}
               <span className="chat-bubble-text">{m.text}</span>
               <span className="chat-bubble-time">{formatTime(m.time)}</span>
             </div>

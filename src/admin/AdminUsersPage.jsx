@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AdminLayout from '../components/AdminLayout'
 import AdminPagination from './AdminPagination'
-import { deleteUserProfile, subscribeToUsers } from '../auth/users'
+import {
+  ROLES,
+  ROLE_LABEL,
+  deleteUserProfile,
+  setUserRole,
+  subscribeToUsers,
+} from '../auth/users'
+import { subscribeToSellerProducts } from '../auth/products'
 import {
   CalendarIcon,
   CheckIcon,
@@ -23,9 +30,9 @@ import {
 // ---------------------------------------------------------------------
 // Lists every account stored in Firestore (`users/{uid}` collection).
 // The table reacts in real time via `onSnapshot`, so newly registered
-// accounts show up without a refresh. For each user we still pull the
-// personal ads bucket (`laundry:userAds:<id>`) from localStorage —
-// that's a separate, ad-only data source that lives client-side.
+// accounts show up without a refresh. For the per-user detail modal
+// we subscribe to the global `products` collection filtered by
+// sellerId so the admin can see exactly what each seller has live.
 //
 // Features:
 //   • Search by name / email / phone
@@ -38,25 +45,6 @@ import {
 // =====================================================================
 
 const PAGE_SIZE = 8
-
-function readUserAds(userId) {
-  if (!userId || typeof window === 'undefined') return []
-  try {
-    const raw = window.localStorage.getItem(`laundry:userAds:${userId}`)
-    const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function removeUserAds(userId) {
-  try {
-    window.localStorage.removeItem(`laundry:userAds:${userId}`)
-  } catch {
-    /* ignore */
-  }
-}
 
 function initial(user) {
   return (user.fullName || user.email || 'U')
@@ -87,6 +75,7 @@ export default function AdminUsersPage() {
   const [usersError, setUsersError] = useState(null)
   const [query, setQuery] = useState('')
   const [providerFilter, setProviderFilter] = useState('all')
+  const [roleFilter, setRoleFilter] = useState('all')
   const [page, setPage] = useState(1)
   const [selectedUser, setSelectedUser] = useState(null)
 
@@ -107,14 +96,17 @@ export default function AdminUsersPage() {
     return () => unsubscribe()
   }, [])
 
-  // Enrich every user record with their live ad count + ads list so the
-  // table and the modal can share the same lookup.
-  const enrichedUsers = useMemo(() => {
-    return users.map((u) => {
-      const ads = readUserAds(u.id)
-      return { ...u, ads, adsCount: ads.length }
-    })
-  }, [users])
+  // Ad count comes from the profile doc (`adsCount`); full ad list loads
+  // inside the detail modal via a live subcollection subscription.
+  const enrichedUsers = useMemo(
+    () =>
+      users.map((u) => ({
+        ...u,
+        ads: [],
+        adsCount: typeof u.adsCount === 'number' ? u.adsCount : 0,
+      })),
+    [users]
+  )
 
   const totalEmail = useMemo(
     () => enrichedUsers.filter((u) => (u.provider || 'email') === 'email').length,
@@ -128,12 +120,25 @@ export default function AdminUsersPage() {
     () => enrichedUsers.reduce((sum, u) => sum + u.adsCount, 0),
     [enrichedUsers]
   )
+  const totalSellers = useMemo(
+    () =>
+      enrichedUsers.filter(
+        (u) => u.role === ROLES.SELLER || u.role === ROLES.ADMIN
+      ).length,
+    [enrichedUsers]
+  )
+  const totalAdmins = useMemo(
+    () => enrichedUsers.filter((u) => u.role === ROLES.ADMIN).length,
+    [enrichedUsers]
+  )
 
   const filteredUsers = useMemo(() => {
     const q = query.trim().toLowerCase()
     return enrichedUsers.filter((u) => {
       const prov = u.provider || 'email'
       if (providerFilter !== 'all' && prov !== providerFilter) return false
+      if (roleFilter !== 'all' && (u.role || ROLES.USER) !== roleFilter)
+        return false
       if (!q) return true
       return (
         (u.fullName || '').toLowerCase().includes(q) ||
@@ -142,7 +147,7 @@ export default function AdminUsersPage() {
         (u.location || '').toLowerCase().includes(q)
       )
     })
-  }, [enrichedUsers, query, providerFilter])
+  }, [enrichedUsers, query, providerFilter, roleFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -161,6 +166,41 @@ export default function AdminUsersPage() {
     setPage(1)
   }, [])
 
+  const handleRoleFilterChange = useCallback((value) => {
+    setRoleFilter(value)
+    setPage(1)
+  }, [])
+
+  const handleRoleChange = useCallback(async (user, nextRole) => {
+    if (!user?.id || !nextRole) return
+    const prevRole = user.role || ROLES.USER
+    if (nextRole === prevRole) return
+    if (
+      nextRole === ROLES.ADMIN &&
+      !window.confirm(
+        `Grant ADMIN privileges to ${
+          user.fullName || user.email
+        }?\n\nThey'll have full access to the admin panel, including the ability to manage other users.`
+      )
+    ) {
+      return
+    }
+    // Optimistic update — the snapshot listener will reconcile.
+    setSelectedUser((prev) =>
+      prev?.id === user.id ? { ...prev, role: nextRole } : prev
+    )
+    try {
+      await setUserRole(user.id, nextRole)
+    } catch (err) {
+      window.alert(
+        `Failed to update role: ${err?.message || 'Firestore write failed.'}`
+      )
+      setSelectedUser((prev) =>
+        prev?.id === user.id ? { ...prev, role: prevRole } : prev
+      )
+    }
+  }, [])
+
   const handleDelete = useCallback(async (user) => {
     if (
       !window.confirm(
@@ -171,7 +211,6 @@ export default function AdminUsersPage() {
     }
     // Optimistic removal — the snapshot listener will reconcile.
     setSelectedUser((prev) => (prev?.id === user.id ? null : prev))
-    removeUserAds(user.id)
     try {
       await deleteUserProfile(user.id)
     } catch (err) {
@@ -195,28 +234,28 @@ export default function AdminUsersPage() {
           tone="brand"
         />
         <StatCard
-          icon={MailIcon}
-          label="Email signups"
-          value={totalEmail.toLocaleString('en-IN')}
+          icon={PackageIcon}
+          label="Sellers"
+          value={totalSellers.toLocaleString('en-IN')}
           trend={`${
             users.length > 0
-              ? Math.round((totalEmail / users.length) * 100)
+              ? Math.round((totalSellers / users.length) * 100)
               : 0
-          }% of total`}
+          }% of accounts`}
           tone="violet"
         />
         <StatCard
           icon={ShieldIcon}
-          label="Google signups"
-          value={totalGoogle.toLocaleString('en-IN')}
-          trend="OAuth provider"
+          label="Admins"
+          value={totalAdmins.toLocaleString('en-IN')}
+          trend="with full panel access"
           tone="amber"
         />
         <StatCard
           icon={PackageIcon}
           label="Ads posted"
           value={totalAds.toLocaleString('en-IN')}
-          trend="across every user"
+          trend={`${totalEmail} email · ${totalGoogle} Google`}
           tone="green"
         />
       </section>
@@ -261,6 +300,18 @@ export default function AdminUsersPage() {
             <option value="email">Email</option>
             <option value="google">Google</option>
           </select>
+
+          <select
+            className="admin-select"
+            value={roleFilter}
+            onChange={(e) => handleRoleFilterChange(e.target.value)}
+            aria-label="Filter by role"
+          >
+            <option value="all">All roles</option>
+            <option value={ROLES.ADMIN}>Admin</option>
+            <option value={ROLES.SELLER}>Seller</option>
+            <option value={ROLES.USER}>User</option>
+          </select>
         </div>
       </div>
 
@@ -290,6 +341,7 @@ export default function AdminUsersPage() {
               <thead>
                 <tr>
                   <th>User</th>
+                  <th>Role</th>
                   <th>Provider</th>
                   <th>Contact</th>
                   <th>Location</th>
@@ -320,6 +372,9 @@ export default function AdminUsersPage() {
                           <span className="admin-user-cell-email">{u.email}</span>
                         </span>
                       </button>
+                    </td>
+                    <td>
+                      <RoleBadge role={u.role} />
                     </td>
                     <td>
                       <ProviderBadge provider={u.provider} />
@@ -388,12 +443,25 @@ export default function AdminUsersPage() {
 
       {selectedUser && (
         <UserDetailModal
+          key={selectedUser.id}
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
           onDelete={() => handleDelete(selectedUser)}
+          onRoleChange={(nextRole) => handleRoleChange(selectedUser, nextRole)}
         />
       )}
     </AdminLayout>
+  )
+}
+
+/* -------------------------------------------------------------------- */
+/*  Role badge                                                            */
+/* -------------------------------------------------------------------- */
+
+function RoleBadge({ role }) {
+  const r = role || ROLES.USER
+  return (
+    <span className={`admin-role admin-role-${r}`}>{ROLE_LABEL[r] || r}</span>
   )
 }
 
@@ -437,7 +505,21 @@ function ProviderBadge({ provider }) {
 /*  User detail modal                                                    */
 /* -------------------------------------------------------------------- */
 
-function UserDetailModal({ user, onClose, onDelete }) {
+function UserDetailModal({ user, onClose, onDelete, onRoleChange }) {
+  const [ads, setAds] = useState([])
+  const userId = user?.id
+  const role = user?.role || ROLES.USER
+
+  useEffect(() => {
+    if (!userId) return undefined
+    const unsubscribe = subscribeToSellerProducts(userId, setAds, () => setAds([]))
+    return unsubscribe
+  }, [userId])
+
+  const displayAds = userId ? ads : []
+  const adsCount =
+    typeof user.adsCount === 'number' ? user.adsCount : displayAds.length
+
   return (
     <div
       className="admin-modal-overlay"
@@ -456,7 +538,8 @@ function UserDetailModal({ user, onClose, onDelete }) {
               <h2>{user.fullName || 'Unnamed user'}</h2>
               <p className="admin-modal-user-sub">
                 <MailIcon size={12} /> {user.email}{' '}
-                <ProviderBadge provider={user.provider} />
+                <ProviderBadge provider={user.provider} />{' '}
+                <RoleBadge role={role} />
               </p>
             </div>
           </div>
@@ -497,22 +580,57 @@ function UserDetailModal({ user, onClose, onDelete }) {
             </div>
           )}
 
+          <div className="admin-detail-role">
+            <div className="admin-card-head">
+              <h2>Privileges</h2>
+              <p>
+                Change the role to grant or revoke access to seller and
+                admin features.
+              </p>
+            </div>
+            <div className="admin-role-controls">
+              <div className="admin-role-current">
+                <span className="admin-field-label">Current role</span>
+                <RoleBadge role={role} />
+              </div>
+              <label className="admin-role-select-wrap">
+                <span className="admin-field-label">Update role</span>
+                <select
+                  className="admin-select"
+                  value={role}
+                  onChange={(e) => onRoleChange?.(e.target.value)}
+                  aria-label="Update user role"
+                >
+                  <option value={ROLES.USER}>
+                    User — browse, wishlist, chat
+                  </option>
+                  <option value={ROLES.SELLER}>
+                    Seller — can list products
+                  </option>
+                  <option value={ROLES.ADMIN}>
+                    Admin — full admin panel access
+                  </option>
+                </select>
+              </label>
+            </div>
+          </div>
+
           <div className="admin-detail-ads">
             <div className="admin-card-head">
               <h2>
                 Ads posted{' '}
-                <span className="admin-tab-count">{user.adsCount}</span>
+                <span className="admin-tab-count">{adsCount}</span>
               </h2>
               <p>Listings submitted from this account.</p>
             </div>
 
-            {user.ads.length === 0 ? (
+            {displayAds.length === 0 ? (
               <div className="admin-empty">
                 This user hasn’t posted any ads yet.
               </div>
             ) : (
               <ul className="admin-recent-list">
-                {user.ads.slice(0, 6).map((ad) => (
+                {displayAds.slice(0, 6).map((ad) => (
                   <li key={ad.id} className="admin-recent-row">
                     <span
                       className="admin-recent-thumb"
@@ -538,9 +656,9 @@ function UserDetailModal({ user, onClose, onDelete }) {
                     </span>
                   </li>
                 ))}
-                {user.ads.length > 6 && (
+                {displayAds.length > 6 && (
                   <li className="admin-detail-ads-more">
-                    +{user.ads.length - 6} more ads…
+                    +{displayAds.length - 6} more ads…
                   </li>
                 )}
               </ul>

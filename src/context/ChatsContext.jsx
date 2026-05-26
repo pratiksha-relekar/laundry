@@ -4,220 +4,202 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react'
-import { productMap, products } from '../data/products'
+import { useAuth } from './AuthContext'
+import { useProducts } from './ProductsContext'
+import {
+  ensureChat,
+  hideChatForUser,
+  markChatRead,
+  sendChatMessage,
+  subscribeToChatMessages,
+  subscribeToUserChats,
+} from '../auth/chats'
 
 // =====================================================================
-// ChatsContext
+// ChatsContext (OLX-style live chats)
 // ---------------------------------------------------------------------
-// In-memory + localStorage chats inbox. Each conversation is anchored to
-// a product (we cache the seller name, product title, price and image so
-// the chat row still renders even if the underlying product disappears).
+// Every chat is a shared document in the top-level `chats` collection
+// so both the buyer and the seller see the exact same thread in real
+// time. Messages live in a `messages` subcollection and stream via a
+// dedicated onSnapshot subscription whenever a chat is opened.
 //
-// Seed data: we pick the first ~4 featured products and pre-build a chat
-// thread for each so the inbox feels populated on first run.
+//   chats: chat list for the current user (buyer OR seller view)
+//   activeId / activeChat: currently open thread
+//   messages: live messages for the active thread
+//   totalUnread: number of chats with unread messages
+//   startChat(productId): create-or-get the chat for a product
+//   sendMessage(chatId, text)
+//   removeChat(chatId): soft-delete from this user's inbox
 // =====================================================================
 
 const ChatsContext = createContext(null)
-const STORAGE_KEY = 'laundry:chats'
-
-const SEED_TEMPLATES = [
-  {
-    messages: [
-      { from: 'me', text: 'Hi, is this still available?', offset: -3600 * 24 * 2 },
-      { from: 'seller', text: "Yes, it's available. Are you interested?", offset: -3600 * 24 * 2 + 600 },
-      { from: 'me', text: 'Can you share more pics?', offset: -3600 * 24 + 100 },
-      { from: 'seller', text: 'Sure, sending in a few minutes.', offset: -3600 * 24 + 700 },
-    ],
-  },
-  {
-    messages: [
-      { from: 'me', text: "What's the lowest you can go?", offset: -3600 * 8 },
-      { from: 'seller', text: 'Price is firm, but I can include free delivery within city.', offset: -3600 * 8 + 1200 },
-    ],
-  },
-  {
-    messages: [
-      { from: 'seller', text: 'Hi, thanks for your interest!', offset: -3600 * 3 },
-      { from: 'me', text: 'Does it come with warranty?', offset: -3600 * 3 + 300 },
-      { from: 'seller', text: 'Yes, 6 months seller warranty.', offset: -3600 * 3 + 900 },
-    ],
-  },
-  {
-    messages: [
-      { from: 'me', text: 'Where can I inspect this?', offset: -1800 },
-    ],
-  },
-]
-
-function buildSeed() {
-  const candidates = products.filter((p) => p.featured).slice(0, SEED_TEMPLATES.length)
-  const now = Date.now()
-  return candidates.map((p, i) => {
-    const tpl = SEED_TEMPLATES[i]
-    const messages = tpl.messages.map((m, j) => ({
-      id: `m-${p.id}-${j}`,
-      from: m.from,
-      text: m.text,
-      time: now + m.offset * 1000,
-    }))
-    const last = messages[messages.length - 1]
-    return {
-      id: `chat-${p.id}`,
-      productId: p.id,
-      productTitle: p.title,
-      productImage: p.image,
-      productPrice: p.price,
-      sellerName: p.seller?.name || 'Seller',
-      messages,
-      lastMessage: last.text,
-      lastTime: last.time,
-      unread: last.from === 'seller',
-    }
-  })
-}
-
-function readStored() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : null
-  } catch {
-    return null
-  }
-}
-
-function newId() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID()
-  }
-  return 'm_' + Math.random().toString(36).slice(2, 11)
-}
 
 export function ChatsProvider({ children }) {
-  const [chats, setChats] = useState(() => readStored() ?? buildSeed())
+  const { user } = useAuth()
+  const { getProduct } = useProducts()
+  const myEmail = user?.email || user?.id || null
+  const myName = user?.fullName || ''
+
+  const [rawChats, setRawChats] = useState([])
   const [activeId, setActiveId] = useState(null)
+  const [rawMessages, setRawMessages] = useState([])
 
+  // ----- chats list subscription ---------------------------------------
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(chats))
-    } catch {
-      /* ignore */
-    }
-  }, [chats])
+    if (!myEmail) return undefined
+    return subscribeToUserChats(myEmail, setRawChats, () => setRawChats([]))
+  }, [myEmail])
 
-  const openChat = useCallback((chatId) => {
-    setActiveId(chatId)
-    setChats((prev) =>
-      prev.map((c) => (c.id === chatId ? { ...c, unread: false } : c))
+  // ----- active-thread messages subscription ---------------------------
+  useEffect(() => {
+    if (!activeId) return undefined
+    return subscribeToChatMessages(
+      activeId,
+      setRawMessages,
+      () => setRawMessages([])
     )
+  }, [activeId])
+
+  // Enrich every chat with the "other party" info (whoever isn't me)
+  // and a derived `unread` flag so the UI doesn't have to know about
+  // participants arrays. Logged-out viewers see an empty list.
+  const enrichedChats = useMemo(() => {
+    if (!myEmail) return []
+    return rawChats.map((c) => {
+      const iAmBuyer = c.buyerEmail === myEmail
+      return {
+        ...c,
+        iAmBuyer,
+        otherEmail: iAmBuyer ? c.sellerEmail : c.buyerEmail,
+        otherName: iAmBuyer ? c.sellerName : c.buyerName,
+        unread: c.unreadFor.includes(myEmail),
+      }
+    })
+  }, [rawChats, myEmail])
+
+  // Live messages with a `mine` flag so the bubble renderer can flip
+  // sides without comparing emails itself.
+  const enrichedMessages = useMemo(() => {
+    if (!myEmail || !activeId) return []
+    return rawMessages.map((m) => ({
+      ...m,
+      mine: m.fromEmail === myEmail,
+    }))
+  }, [rawMessages, myEmail, activeId])
+
+  const activeChat = useMemo(() => {
+    if (!activeId) return null
+    const chat = enrichedChats.find((c) => c.id === activeId)
+    if (!chat) return null
+    return { ...chat, messages: enrichedMessages }
+  }, [activeId, enrichedChats, enrichedMessages])
+
+  const openChat = useCallback(
+    (chatId) => {
+      setActiveId(chatId)
+      if (myEmail) {
+        markChatRead(chatId, myEmail).catch((err) =>
+          console.warn('[chats] mark read failed:', err?.message)
+        )
+      }
+    },
+    [myEmail]
+  )
+
+  const closeChat = useCallback(() => {
+    setActiveId(null)
+    setRawMessages([])
   }, [])
 
-  const closeChat = useCallback(() => setActiveId(null), [])
+  // -------------------- startChat (buyer flow) ------------------------
+  const startChat = useCallback(
+    async (productId) => {
+      if (!myEmail) return null
+      const product = getProduct(productId)
+      if (!product) return null
 
-  const startChat = useCallback((productId) => {
-    const product = productMap[productId]
-    if (!product) return null
-    const existing = (readStored() ?? []).find((c) => c.productId === productId)
-    let chatId = `chat-${productId}`
-    setChats((prev) => {
-      if (prev.some((c) => c.productId === productId)) return prev
-      return [
-        {
-          id: chatId,
+      const sellerEmail = product.sellerId || product.seller?.id || ''
+      const sellerName = product.seller?.name || 'Seller'
+      // Catalog seed products don't have a real seller account, so we
+      // can't open a live chat with them.
+      if (!sellerEmail || !sellerEmail.includes('@')) {
+        console.warn('[chats] product has no real seller — chat unavailable')
+        return null
+      }
+      if (sellerEmail === myEmail) {
+        // Don't let a seller chat with themselves on their own listing.
+        return null
+      }
+
+      try {
+        const chatId = await ensureChat({
           productId,
           productTitle: product.title,
           productImage: product.image,
           productPrice: product.price,
-          sellerName: product.seller?.name || 'Seller',
-          messages: [],
-          lastMessage: '',
-          lastTime: Date.now(),
-          unread: false,
-        },
-        ...prev,
-      ]
-    })
-    if (existing) chatId = existing.id
-    setActiveId(chatId)
-    return chatId
-  }, [])
+          buyerEmail: myEmail,
+          buyerName: myName,
+          sellerEmail,
+          sellerName,
+        })
+        setActiveId(chatId)
+        // Stamp lastRead immediately so the buyer doesn't see their
+        // own thread as "unread" the moment they create it.
+        markChatRead(chatId, myEmail).catch(() => {})
+        return chatId
+      } catch (err) {
+        console.warn('[chats] start failed:', err?.message)
+        return null
+      }
+    },
+    [myEmail, myName, getProduct]
+  )
 
-  const sendMessage = useCallback((chatId, text) => {
-    const trimmed = (text || '').trim()
-    if (!trimmed) return
-    const now = Date.now()
-    setChats((prev) =>
-      prev.map((c) =>
-        c.id === chatId
-          ? {
-              ...c,
-              messages: [
-                ...c.messages,
-                { id: newId(), from: 'me', text: trimmed, time: now },
-              ],
-              lastMessage: trimmed,
-              lastTime: now,
-              unread: false,
-            }
-          : c
-      )
-    )
+  const sendMessage = useCallback(
+    async (chatId, text) => {
+      const trimmed = (text || '').trim()
+      if (!myEmail || !chatId || !trimmed) return
+      try {
+        await sendChatMessage(chatId, {
+          fromEmail: myEmail,
+          fromName: myName,
+          text: trimmed,
+        })
+      } catch (err) {
+        console.warn('[chats] send failed:', err?.message)
+      }
+    },
+    [myEmail, myName]
+  )
 
-    // Simulated seller auto-reply so the thread feels alive.
-    setTimeout(() => {
-      const replies = [
-        'Thanks for your message! Let me check and get back to you.',
-        'Sure, sounds good.',
-        'Yes, that works for me.',
-        'Could you share your number? It would be easier to coordinate.',
-      ]
-      const reply = replies[Math.floor(Math.random() * replies.length)]
-      setChats((prev) =>
-        prev.map((c) =>
-          c.id === chatId
-            ? {
-                ...c,
-                messages: [
-                  ...c.messages,
-                  { id: newId(), from: 'seller', text: reply, time: Date.now() },
-                ],
-                lastMessage: reply,
-                lastTime: Date.now(),
-                // Mark unread only if user isn't actively viewing the thread.
-                unread: chatId !== activeIdRef.current,
-              }
-            : c
-        )
-      )
-    }, 1400 + Math.random() * 800)
-  }, [])
-
-  const removeChat = useCallback((chatId) => {
-    setChats((prev) => prev.filter((c) => c.id !== chatId))
-    setActiveId((prev) => (prev === chatId ? null : prev))
-  }, [])
-
-  // Track the active id in a ref so the setTimeout above can read the
-  // up-to-date value when it eventually fires.
-  const activeIdRef = useRef(activeId)
-  useEffect(() => {
-    activeIdRef.current = activeId
-  }, [activeId])
+  const removeChat = useCallback(
+    async (chatId) => {
+      if (!myEmail || !chatId) return
+      if (activeId === chatId) {
+        setActiveId(null)
+        setRawMessages([])
+      }
+      try {
+        await hideChatForUser(chatId, myEmail)
+      } catch (err) {
+        console.warn('[chats] hide failed:', err?.message)
+      }
+    },
+    [myEmail, activeId]
+  )
 
   const totalUnread = useMemo(
-    () => chats.reduce((sum, c) => sum + (c.unread ? 1 : 0), 0),
-    [chats]
+    () => enrichedChats.reduce((sum, c) => sum + (c.unread ? 1 : 0), 0),
+    [enrichedChats]
   )
 
   const value = useMemo(
     () => ({
-      chats,
+      chats: enrichedChats,
       activeId,
-      activeChat: chats.find((c) => c.id === activeId) || null,
+      activeChat,
       totalUnread,
       openChat,
       closeChat,
@@ -225,7 +207,17 @@ export function ChatsProvider({ children }) {
       sendMessage,
       removeChat,
     }),
-    [chats, activeId, totalUnread, openChat, closeChat, startChat, sendMessage, removeChat]
+    [
+      enrichedChats,
+      activeId,
+      activeChat,
+      totalUnread,
+      openChat,
+      closeChat,
+      startChat,
+      sendMessage,
+      removeChat,
+    ]
   )
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>

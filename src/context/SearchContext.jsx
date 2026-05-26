@@ -6,9 +6,8 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { products as CATALOG_PRODUCTS } from '../data/products'
 import { categoryMap } from '../data/categories'
-import { useUserAds } from './UserAdsContext'
+import { useProducts } from './ProductsContext'
 
 // =====================================================================
 // SearchContext (also handles the budget filter)
@@ -92,7 +91,7 @@ function matchesBudget(product, minPrice, maxPrice) {
 }
 
 export function SearchProvider({ children }) {
-  const { ads: userAds } = useUserAds()
+  const { products: globalProducts } = useProducts()
 
   const [query, setQuery] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState('')
@@ -154,12 +153,10 @@ export function SearchProvider({ children }) {
   const isFiltering =
     submittedQuery.trim() !== '' || minPrice != null || maxPrice != null
 
-  // User-posted ads sit on top so the seller sees their freshly listed
-  // item appear first on the home grid and in search.
-  const allProducts = useMemo(
-    () => [...userAds, ...CATALOG_PRODUCTS],
-    [userAds]
-  )
+  // The global products list already merges live Firestore listings
+  // (user + admin) on top of the static catalog seed, so the home grid
+  // and search both see every newly posted ad immediately.
+  const allProducts = globalProducts
 
   const allProductsByCategory = useMemo(() => {
     const map = {}

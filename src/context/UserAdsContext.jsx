@@ -2,80 +2,56 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
 } from 'react'
+import { useAuth } from './AuthContext'
+import { useProducts } from './ProductsContext'
 
 // =====================================================================
 // UserAdsContext
 // ---------------------------------------------------------------------
-// Holds the listings the current device has posted via the Sell page.
-// Each ad mirrors the shape used by the catalog products (image, title,
-// price, location, date) plus a couple of seller-side fields (status,
-// views, chats, favs) so the My Ads page can render it without any
-// special-casing.
+// Thin wrapper around ProductsContext that exposes only the listings
+// belonging to the signed-in seller. Writes go through the global
+// products collection so every visitor sees the new ad immediately.
 //
-// Storage is keyed per-user once we know the user id so multiple users
-// on the same device don't see each other's drafts.
+// Each ad lives in the top-level Firestore `products` collection with
+// a `sellerId` matching the user's UID. On logout we simply expose an
+// empty list — the Firestore docs persist and reload when the same
+// user signs back in.
 // =====================================================================
 
 const UserAdsContext = createContext(null)
 
-const STORAGE_PREFIX = 'laundry:userAds:'
-
-function readStored(userId) {
-  if (!userId) return []
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + userId)
-    const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function writeStored(userId, ads) {
-  if (!userId) return
-  try {
-    localStorage.setItem(STORAGE_PREFIX + userId, JSON.stringify(ads))
-  } catch {
-    /* ignore */
-  }
-}
-
-function newId() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return 'ad_' + crypto.randomUUID().slice(0, 8)
-  }
-  return 'ad_' + Math.random().toString(36).slice(2, 10)
-}
-
 function makeAdId() {
-  // OLX-style numeric ad id.
   return String(1800000000 + Math.floor(Math.random() * 99999999))
 }
 
-export function UserAdsProvider({ userId, children }) {
-  const [ads, setAds] = useState(() => readStored(userId))
+export function UserAdsProvider({ children }) {
+  const { user } = useAuth()
+  const uid = user?.id || null
+  const { marketplaceProducts, addProduct, updateProduct, removeProduct } =
+    useProducts()
 
-  // Re-hydrate whenever the active user changes (login / logout).
-  useEffect(() => {
-    setAds(readStored(userId))
-  }, [userId])
-
-  useEffect(() => {
-    if (userId) writeStored(userId, ads)
-  }, [ads, userId])
+  // Filter the global stream down to the current user's listings.
+  const ads = useMemo(() => {
+    if (!uid) return []
+    return marketplaceProducts.filter((p) => p.sellerId === uid)
+  }, [marketplaceProducts, uid])
 
   const postAd = useCallback(
-    (data) => {
+    async (data) => {
+      if (!uid) throw new Error('You must be logged in to post an ad.')
       const ad = {
-        id: newId(),
         adId: makeAdId(),
         ...data,
+        sellerId: uid,
+        source: 'user',
         image: data.images?.[0] || data.image,
-        images: data.images?.length ? data.images : data.image ? [data.image] : [],
+        images: data.images?.length
+          ? data.images
+          : data.image
+          ? [data.image]
+          : [],
         date: 'TODAY',
         featured: false,
         verified: false,
@@ -83,22 +59,40 @@ export function UserAdsProvider({ userId, children }) {
         views: 0,
         chats: 0,
         favs: 0,
-        createdAt: Date.now(),
         isUserAd: true,
+        seller: data.seller || {
+          id: uid,
+          name: user?.fullName || 'Seller',
+        },
       }
-      setAds((prev) => [ad, ...prev])
-      return ad
+      return await addProduct(ad, uid)
     },
-    []
+    [uid, user?.fullName, addProduct]
   )
 
-  const updateAd = useCallback((id, updates) => {
-    setAds((prev) => prev.map((a) => (a.id === id ? { ...a, ...updates } : a)))
-  }, [])
+  const updateAd = useCallback(
+    async (id, updates) => {
+      if (!uid) return
+      try {
+        await updateProduct(id, updates)
+      } catch (err) {
+        console.warn('[userAds] update failed:', err?.message)
+      }
+    },
+    [uid, updateProduct]
+  )
 
-  const removeAd = useCallback((id) => {
-    setAds((prev) => prev.filter((a) => a.id !== id))
-  }, [])
+  const removeAd = useCallback(
+    async (id) => {
+      if (!uid) return
+      try {
+        await removeProduct(id, uid)
+      } catch (err) {
+        console.warn('[userAds] delete failed:', err?.message)
+      }
+    },
+    [uid, removeProduct]
+  )
 
   const getAd = useCallback(
     (id) => ads.find((a) => a.id === id) || null,

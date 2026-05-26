@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import AdminLayout from '../components/AdminLayout'
 import { useNavigation } from '../context/NavigationContext'
+import { useProducts } from '../context/ProductsContext'
 import { readReviewCount } from './useAdminReviews'
 import { subscribeToUsers } from '../auth/users'
-import { products as CATALOG_PRODUCTS } from '../data/products'
-import { categories } from '../data/categories'
 import {
   ArrowLeftIcon,
   BarChartIcon,
@@ -15,30 +14,6 @@ import {
   TrendingUpIcon,
   UsersIcon,
 } from '../components/Icons'
-
-function readAllUserAds() {
-  const out = []
-  try {
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const key = window.localStorage.key(i)
-      if (!key || !key.startsWith('laundry:userAds:')) continue
-      try {
-        const value = JSON.parse(window.localStorage.getItem(key) || '[]')
-        if (Array.isArray(value)) {
-          const ownerId = key.replace('laundry:userAds:', '')
-          for (const ad of value) {
-            out.push({ ...ad, ownerId })
-          }
-        }
-      } catch {
-        /* skip bad blob */
-      }
-    }
-  } catch {
-    // localStorage unavailable
-  }
-  return out
-}
 
 function formatINR(value) {
   if (value == null || Number.isNaN(value)) return '₹0'
@@ -85,8 +60,13 @@ export default function AdminDashboardPage() {
   } = useNavigation()
   const [allUsers, setAllUsers] = useState([])
   useEffect(() => subscribeToUsers(setAllUsers), [])
-  const userAds = useMemo(() => readAllUserAds(), [])
+  const { products: allProducts, categories, marketplaceProducts } = useProducts()
   const reviewCount = useMemo(() => readReviewCount(), [])
+
+  const userAds = useMemo(
+    () => marketplaceProducts.filter((p) => p.source === 'user'),
+    [marketplaceProducts]
+  )
 
   // Last 5 users to register — falls back to natural order when records
   // pre-date the `createdAt` enrichment.
@@ -96,21 +76,23 @@ export default function AdminDashboardPage() {
     return copy.slice(0, 5)
   }, [allUsers])
 
-  const totalProducts = CATALOG_PRODUCTS.length + userAds.length
+  const totalProducts = allProducts.length
   const totalUsers = allUsers.length
   const totalCategories = categories.length
-  const activeAds = userAds.filter((a) => a.status !== 'sold').length
+  const activeAds = marketplaceProducts.filter(
+    (a) => a.status !== 'sold'
+  ).length
 
-  // Top categories by listing count (catalog + user ads combined).
+  // Top categories by listing count (catalog + user + admin combined).
   const byCategory = useMemo(() => {
     const counts = new Map()
-    for (const p of [...CATALOG_PRODUCTS, ...userAds]) {
+    for (const p of allProducts) {
       counts.set(p.category, (counts.get(p.category) || 0) + 1)
     }
     return categories
       .map((c) => ({ ...c, count: counts.get(c.id) || 0 }))
       .sort((a, b) => b.count - a.count)
-  }, [userAds])
+  }, [allProducts, categories])
 
   // Most recent user-posted ads.
   const recentAds = useMemo(() => {
@@ -120,11 +102,8 @@ export default function AdminDashboardPage() {
   }, [userAds])
 
   const totalGMV = useMemo(() => {
-    return [...CATALOG_PRODUCTS, ...userAds].reduce(
-      (sum, p) => sum + (Number(p.price) || 0),
-      0
-    )
-  }, [userAds])
+    return allProducts.reduce((sum, p) => sum + (Number(p.price) || 0), 0)
+  }, [allProducts])
 
   return (
     <AdminLayout
@@ -136,7 +115,7 @@ export default function AdminDashboardPage() {
           icon={PackageIcon}
           label="Total products"
           value={totalProducts.toLocaleString('en-IN')}
-          trend={`${activeAds} active user ads`}
+          trend={`${activeAds} active listings`}
           tone="brand"
           onClick={goAdminProducts}
         />

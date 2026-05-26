@@ -16,13 +16,13 @@ export default function SellerCard({ seller, productId }) {
   const { goChats, goLogin } = useNavigation()
   const { user } = useAuth()
 
-  const handleChat = () => {
+  const handleChat = async () => {
     if (!user) {
       goLogin()
       return
     }
-    startChat(productId)
-    goChats()
+    const chatId = await startChat(productId)
+    if (chatId) goChats()
   }
 
   return (

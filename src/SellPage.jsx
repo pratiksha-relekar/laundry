@@ -8,6 +8,8 @@ import {
   ArrowLeftIcon,
   CheckIcon,
   CloseIcon,
+  PackageIcon,
+  ShieldIcon,
   UploadIcon,
   UserIcon,
 } from './components/Icons'
@@ -53,6 +55,62 @@ function resizeImage(file, maxDim = 1024, quality = 0.85) {
   })
 }
 
+function BecomeSellerPrompt({ user, onUpgrade, onBack, upgrading, error }) {
+  return (
+    <div className="lx-page sell-page">
+      <div className="lx-page-head">
+        <button type="button" className="details-back" onClick={onBack}>
+          <ArrowLeftIcon size={16} /> Back to home
+        </button>
+        <h1 className="lx-page-h1">Become a seller</h1>
+      </div>
+
+      <div className="seller-onboarding">
+        <div className="seller-onboarding-icon" aria-hidden>
+          <PackageIcon size={36} />
+        </div>
+        <h2>Unlock seller privileges</h2>
+        <p>
+          Your account <strong>{user?.email}</strong> is currently a
+          <em> user</em>. Upgrade to a <strong>seller</strong> account to
+          list products on the Laundry marketplace. You can continue to
+          buy and chat just like before.
+        </p>
+        <ul className="seller-onboarding-list">
+          <li>
+            <CheckIcon size={14} /> List unlimited used laundry equipment
+          </li>
+          <li>
+            <CheckIcon size={14} /> Manage your ads &amp; chats in one place
+          </li>
+          <li>
+            <CheckIcon size={14} /> Free forever — no listing fees
+          </li>
+        </ul>
+
+        {error && (
+          <div className="auth-error auth-form-error" role="alert">
+            {error}
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="auth-submit seller-onboarding-cta"
+          onClick={onUpgrade}
+          disabled={upgrading}
+        >
+          {upgrading ? 'Upgrading…' : 'Upgrade to seller account'}
+        </button>
+        <p className="seller-onboarding-note">
+          <ShieldIcon size={12} /> Admin can promote or demote roles at any
+          time from the admin Users page.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function SellLoginPrompt({ onLogin, onBack }) {
   return (
     <div className="lx-page sell-page">
@@ -86,9 +144,21 @@ function SellLoginPrompt({ onLogin, onBack }) {
 }
 
 export default function SellPage() {
-  const { user } = useAuth()
+  const { user, isSeller, becomeSeller } = useAuth()
   const { goHome, goLogin, goMyAds } = useNavigation()
   const { postAd } = useUserAds()
+  const [upgrading, setUpgrading] = useState(false)
+  const [upgradeError, setUpgradeError] = useState('')
+
+  const handleUpgrade = async () => {
+    setUpgradeError('')
+    setUpgrading(true)
+    const result = await becomeSeller()
+    setUpgrading(false)
+    if (!result.ok) {
+      setUpgradeError(result.error || 'Could not upgrade your account.')
+    }
+  }
 
   const [categoryId, setCategoryId] = useState('')
   const [subcategoryId, setSubcategoryId] = useState('')
@@ -112,6 +182,18 @@ export default function SellPage() {
 
   if (!user) {
     return <SellLoginPrompt onLogin={goLogin} onBack={goHome} />
+  }
+
+  if (!isSeller) {
+    return (
+      <BecomeSellerPrompt
+        user={user}
+        onUpgrade={handleUpgrade}
+        onBack={goHome}
+        upgrading={upgrading}
+        error={upgradeError}
+      />
+    )
   }
 
   const handleFiles = async (fileList) => {
@@ -149,48 +231,50 @@ export default function SellPage() {
     return next
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
     const v = validate()
     setErrors(v)
     if (Object.keys(v).length > 0) {
       setSubmitting(false)
-      // Scroll to the first error.
       const firstField = Object.keys(v)[0]
       const el = document.querySelector(`[data-field="${firstField}"]`)
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
 
-    const ad = postAd({
-      title: title.trim(),
-      description: description.trim(),
-      price: Number(price),
-      brand: brand.trim(),
-      condition: CONDITIONS.find((c) => c.id === condition)?.label,
-      images,
-      location: location.trim(),
-      phone: phone.trim(),
-      category: categoryId,
-      subcategory: subcategoryId,
-      seller: {
-        id: user.id,
-        name: user.fullName,
-        memberSince: 'Today',
-        itemsListed: 1,
-        phoneMasked: phone ? phone.replace(/\d(?=\d{4})/g, 'x') : '+91 9xxxxxxxxx',
-      },
-      adId: undefined,
-    })
-
-    setSubmitting(false)
-    setPosted(true)
-    // Give the success state a beat to register before navigating away.
-    setTimeout(() => {
-      goMyAds()
-    }, 900)
-    return ad
+    try {
+      await postAd({
+        title: title.trim(),
+        description: description.trim(),
+        price: Number(price),
+        brand: brand.trim(),
+        condition: CONDITIONS.find((c) => c.id === condition)?.label,
+        images,
+        location: location.trim(),
+        phone: phone.trim(),
+        category: categoryId,
+        subcategory: subcategoryId,
+        seller: {
+          id: user.id,
+          name: user.fullName,
+          memberSince: 'Today',
+          itemsListed: 1,
+          phoneMasked: phone
+            ? phone.replace(/\d(?=\d{4})/g, 'x')
+            : '+91 9xxxxxxxxx',
+        },
+      })
+      setPosted(true)
+      setTimeout(() => goMyAds(), 900)
+    } catch (err) {
+      setErrors({
+        form: err?.message || 'Could not publish your ad. Please try again.',
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (posted) {

@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAdmin } from '../context/AdminContext'
+import { useAuth } from '../context/AuthContext'
 import { useNavigation } from '../context/NavigationContext'
 import AdminLogo from './AdminLogo'
 import {
@@ -9,8 +10,16 @@ import {
 } from '../components/Icons'
 
 export default function AdminLoginPage() {
-  const { login } = useAdmin()
+  const { login, isAdmin } = useAdmin()
+  const { isAdmin: firebaseIsAdmin } = useAuth()
   const { goLogin, goAdminDashboard } = useNavigation()
+
+  // If the user has already been promoted to admin via Firebase, drop
+  // them straight into the dashboard — no need to type the legacy
+  // bootstrap credentials.
+  useEffect(() => {
+    if (isAdmin || firebaseIsAdmin) goAdminDashboard()
+  }, [isAdmin, firebaseIsAdmin, goAdminDashboard])
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

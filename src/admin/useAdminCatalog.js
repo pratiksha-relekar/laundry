@@ -1,152 +1,92 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { useProducts } from '../context/ProductsContext'
 
 // =====================================================================
 // useAdminCatalog
 // ---------------------------------------------------------------------
-// Tiny hook that owns the admin-added products & categories. The static
-// catalog (src/data/products.js, src/data/categories.js) is read-only —
-// admins layer their own items on top, and those extras are persisted
-// per-browser in localStorage so they survive a reload.
-//
-// Storage keys:
-//   laundry:admin:products    → Array<AdminProduct>
-//   laundry:admin:categories  → Array<AdminCategory>
+// Wrapper that exposes the live Firestore-backed product + category
+// collections to the admin pages. The static seeds in
+// `src/data/products.js` and `src/data/categories.js` stay read-only —
+// admin-added items live in Firestore alongside user-posted listings
+// so every visitor sees them.
 // =====================================================================
 
-const PRODUCTS_KEY = 'laundry:admin:products'
-const CATEGORIES_KEY = 'laundry:admin:categories'
-
-function readJSON(key) {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = window.localStorage.getItem(key)
-    const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function writeJSON(key, value) {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // quota / privacy-mode — silently ignore
-  }
-}
-
-function genId(prefix) {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2, 7)}`
-}
-
 export function useAdminCatalog() {
-  const [adminProducts, setAdminProducts] = useState(() =>
-    readJSON(PRODUCTS_KEY)
+  const { user } = useAuth()
+  const {
+    marketplaceProducts,
+    adminProducts,
+    customCategories,
+    addProduct: addGlobalProduct,
+    removeProduct: removeGlobalProduct,
+    updateProduct: updateGlobalProduct,
+    addCategory: addGlobalCategory,
+    removeCategory: removeGlobalCategory,
+  } = useProducts()
+
+  const addProduct = useCallback(
+    async (data) => {
+      const payload = {
+        ...data,
+        price: Number(data.price) || 0,
+        images: Array.isArray(data.images) ? data.images : data.image ? [data.image] : [],
+        source: 'admin',
+        status: data.status || 'active',
+        addedBy: user?.id || 'admin',
+        seller: data.seller || {
+          id: 'admin',
+          name: user?.fullName || 'Laundry team',
+          verified: true,
+        },
+      }
+      return await addGlobalProduct(payload)
+    },
+    [user?.id, user?.fullName, addGlobalProduct]
   )
-  const [adminCategories, setAdminCategories] = useState(() =>
-    readJSON(CATEGORIES_KEY)
+
+  const removeProduct = useCallback(
+    async (id) => {
+      const target = adminProducts.find((p) => p.id === id)
+      await removeGlobalProduct(id, target?.sellerId)
+    },
+    [adminProducts, removeGlobalProduct]
   )
 
-  useEffect(() => {
-    writeJSON(PRODUCTS_KEY, adminProducts)
-  }, [adminProducts])
+  const updateProduct = useCallback(
+    async (id, patch) => {
+      await updateGlobalProduct(id, patch)
+    },
+    [updateGlobalProduct]
+  )
 
-  useEffect(() => {
-    writeJSON(CATEGORIES_KEY, adminCategories)
-  }, [adminCategories])
+  const addCategory = useCallback(
+    async (data) => {
+      const payload = { ...data, addedBy: user?.id || 'admin' }
+      return await addGlobalCategory(payload)
+    },
+    [user?.id, addGlobalCategory]
+  )
 
-  const addProduct = useCallback((data) => {
-    const product = {
-      id: genId('ap'),
-      source: 'admin',
-      createdAt: Date.now(),
-      status: 'active',
-      featured: false,
-      verified: false,
-      ...data,
-      price: Number(data.price) || 0,
-    }
-    setAdminProducts((list) => [product, ...list])
-    return product
-  }, [])
+  const removeCategory = useCallback(
+    async (id) => {
+      await removeGlobalCategory(id)
+    },
+    [removeGlobalCategory]
+  )
 
-  const removeProduct = useCallback((id) => {
-    setAdminProducts((list) => list.filter((p) => p.id !== id))
-  }, [])
-
-  const updateProduct = useCallback((id, patch) => {
-    setAdminProducts((list) =>
-      list.map((p) => (p.id === id ? { ...p, ...patch } : p))
-    )
-  }, [])
-
-  const addCategory = useCallback((data) => {
-    const name = (data.name || '').trim()
-    const slug =
-      (data.id || name)
-        .toString()
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '') || genId('cat')
-    const category = {
-      id: slug,
-      source: 'admin',
-      createdAt: Date.now(),
-      iconName: 'Package',
-      iconColor: data.iconColor || '#1B6FFF',
-      count: 0,
-      subcategories: [],
-      ...data,
-      name,
-    }
-    setAdminCategories((list) => {
-      const exists = list.some((c) => c.id === category.id)
-      return exists ? list : [category, ...list]
-    })
-    return category
-  }, [])
-
-  const removeCategory = useCallback((id) => {
-    setAdminCategories((list) => list.filter((c) => c.id !== id))
-  }, [])
+  // Pull only the "user" listings for the admin Analytics + Dashboard
+  // tallies so they stay aware of grass-roots inventory.
+  const userPostedAds = marketplaceProducts.filter((p) => p.source === 'user')
 
   return {
     adminProducts,
-    adminCategories,
+    adminCategories: customCategories,
+    userPostedAds,
     addProduct,
     removeProduct,
     updateProduct,
     addCategory,
     removeCategory,
   }
-}
-
-// Helper for the dashboard / products page — reads every user-posted ad
-// out of `laundry:userAds:<userId>` keys and returns a flat list.
-export function readUserPostedAds() {
-  const out = []
-  if (typeof window === 'undefined') return out
-  try {
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const key = window.localStorage.key(i)
-      if (!key || !key.startsWith('laundry:userAds:')) continue
-      try {
-        const value = JSON.parse(window.localStorage.getItem(key) || '[]')
-        if (Array.isArray(value)) {
-          const ownerId = key.replace('laundry:userAds:', '')
-          for (const ad of value) {
-            out.push({ ...ad, ownerId, source: 'user' })
-          }
-        }
-      } catch {
-        /* skip malformed blob */
-      }
-    }
-  } catch {
-    /* localStorage unavailable */
-  }
-  return out
 }

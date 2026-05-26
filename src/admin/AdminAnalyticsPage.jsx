@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import AdminLayout from '../components/AdminLayout'
 import { useAdminReviews } from './useAdminReviews'
-import { useAdminCatalog, readUserPostedAds } from './useAdminCatalog'
+import { useProducts } from '../context/ProductsContext'
 import { subscribeToUsers } from '../auth/users'
-import { products as CATALOG_PRODUCTS } from '../data/products'
-import { categories as CATALOG_CATEGORIES } from '../data/categories'
 import {
   BarChartIcon,
   CheckIcon,
@@ -82,21 +80,15 @@ function shortCity(loc) {
 }
 
 export default function AdminAnalyticsPage() {
-  const { adminProducts } = useAdminCatalog()
+  const {
+    products: allProducts,
+    categories: CATALOG_CATEGORIES,
+    marketplaceProducts,
+  } = useProducts()
   const { reviews, stats: reviewStats } = useAdminReviews()
 
   const [users, setUsers] = useState([])
   useEffect(() => subscribeToUsers(setUsers), [])
-  const userAds = useMemo(() => readUserPostedAds(), [])
-
-  const allProducts = useMemo(
-    () => [
-      ...CATALOG_PRODUCTS.map((p) => ({ ...p, source: 'catalog' })),
-      ...adminProducts,
-      ...userAds,
-    ],
-    [adminProducts, userAds]
-  )
 
   const totalGMV = useMemo(
     () => allProducts.reduce((sum, p) => sum + (Number(p.price) || 0), 0),
@@ -124,13 +116,12 @@ export default function AdminAnalyticsPage() {
     ]
   }, [allProducts])
 
-  // Top categories — combine the catalog's `count` (real listing
-  // counts on the home page) with live admin/user additions for the
-  // same slug.
+  // Top categories — combine the static seed count with live listings
+  // (user + admin) for the same slug.
   const topCategories = useMemo(() => {
     const counts = new Map()
     for (const c of CATALOG_CATEGORIES) counts.set(c.id, c.count || 0)
-    for (const p of [...adminProducts, ...userAds]) {
+    for (const p of marketplaceProducts) {
       counts.set(p.category, (counts.get(p.category) || 0) + 1)
     }
     return CATALOG_CATEGORIES.map((c) => ({
@@ -140,7 +131,7 @@ export default function AdminAnalyticsPage() {
     }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 6)
-  }, [adminProducts, userAds])
+  }, [CATALOG_CATEGORIES, marketplaceProducts])
 
   // Top cities — pulled from every product's `location` field.
   const topCities = useMemo(() => {

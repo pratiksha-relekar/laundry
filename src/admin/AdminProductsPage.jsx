@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AdminLayout from '../components/AdminLayout'
 import AdminPagination from './AdminPagination'
-import { products as CATALOG_PRODUCTS } from '../data/products'
-import { categories as CATALOG_CATEGORIES } from '../data/categories'
-import { useAdminCatalog, readUserPostedAds } from './useAdminCatalog'
+import { useProducts } from '../context/ProductsContext'
+import { useAdminCatalog } from './useAdminCatalog'
 import {
   CloseIcon,
   EditIcon,
@@ -57,13 +56,12 @@ function sourceLabel(src) {
 
 export default function AdminProductsPage() {
   const {
-    adminProducts,
-    adminCategories,
     addProduct,
     removeProduct,
     addCategory,
     removeCategory,
   } = useAdminCatalog()
+  const { products: allProducts, categories: allCategories } = useProducts()
 
   const [tab, setTab] = useState('products')
   const [query, setQuery] = useState('')
@@ -71,20 +69,6 @@ export default function AdminProductsPage() {
   const [page, setPage] = useState(1)
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [showAddCategory, setShowAddCategory] = useState(false)
-
-  // User-posted ads are re-read once on mount (and refresh together with
-  // admin mutations so a freshly added product appears immediately).
-  const [userAds] = useState(() => readUserPostedAds())
-
-  const allCategories = useMemo(
-    () => [...CATALOG_CATEGORIES, ...adminCategories],
-    [adminCategories]
-  )
-
-  const allProducts = useMemo(() => {
-    const catalog = CATALOG_PRODUCTS.map((p) => ({ ...p, source: 'catalog' }))
-    return [...adminProducts, ...userAds, ...catalog]
-  }, [adminProducts, userAds])
 
   // Search + category filter
   const filteredProducts = useMemo(() => {
@@ -132,17 +116,25 @@ export default function AdminProductsPage() {
     return counts
   }, [allProducts])
 
-  const handleAddProduct = (data) => {
-    addProduct(data)
-    setShowAddProduct(false)
-    setTab('products')
-    setPage(1)
+  const handleAddProduct = async (data) => {
+    try {
+      await addProduct(data)
+      setShowAddProduct(false)
+      setTab('products')
+      setPage(1)
+    } catch (err) {
+      console.warn('[admin] add product failed:', err?.message)
+    }
   }
 
-  const handleAddCategory = (data) => {
-    addCategory(data)
-    setShowAddCategory(false)
-    setTab('categories')
+  const handleAddCategory = async (data) => {
+    try {
+      await addCategory(data)
+      setShowAddCategory(false)
+      setTab('categories')
+    } catch (err) {
+      console.warn('[admin] add category failed:', err?.message)
+    }
   }
 
   return (
@@ -373,14 +365,14 @@ function ProductsTable({
                         type="button"
                         className="admin-icon-btn admin-icon-btn-sm admin-icon-btn-danger"
                         title={
-                          p.source === 'admin'
-                            ? 'Remove product'
-                            : 'Only admin-added products can be removed'
+                          p.source === 'catalog'
+                            ? 'Catalog seed products cannot be removed'
+                            : 'Remove product'
                         }
                         aria-label="Delete"
-                        disabled={p.source !== 'admin'}
+                        disabled={p.source === 'catalog'}
                         onClick={() => {
-                          if (p.source !== 'admin') return
+                          if (p.source === 'catalog') return
                           if (
                             window.confirm(`Remove "${p.title}" from the catalog?`)
                           ) {

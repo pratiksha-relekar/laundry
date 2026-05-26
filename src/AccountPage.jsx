@@ -106,9 +106,18 @@ function ProfileSection() {
             <Avatar user={user} size={72} />
             <div>
               <h3>{user.fullName}</h3>
-              {user.provider === 'google' && (
-                <span className="account-provider">via Google</span>
-              )}
+              <div className="account-role-line">
+                <span className={`account-role-badge account-role-${user.role || 'user'}`}>
+                  {user.role === 'admin'
+                    ? 'Admin'
+                    : user.role === 'seller'
+                    ? 'Seller'
+                    : 'User'}
+                </span>
+                {user.provider === 'google' && (
+                  <span className="account-provider">via Google</span>
+                )}
+              </div>
               <p className="account-member">
                 <CalendarIcon size={14} />
                 Member since {new Date().toLocaleDateString('en-IN', {
@@ -439,6 +448,15 @@ export default function AccountPage() {
             <div className="account-side-meta">
               <strong>{user.fullName}</strong>
               <span>{user.email}</span>
+              <span
+                className={`account-role-badge account-role-${user.role || 'user'} account-role-pill`}
+              >
+                {user.role === 'admin'
+                  ? 'Admin'
+                  : user.role === 'seller'
+                  ? 'Seller'
+                  : 'User'}
+              </span>
             </div>
           </div>
 

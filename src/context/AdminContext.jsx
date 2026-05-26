@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { useAuth } from './AuthContext'
 
 // =====================================================================
 // AdminContext
@@ -218,11 +219,35 @@ export function AdminProvider({ children }) {
     return { ok: true }
   }, [])
 
-  const value = useMemo(
-    () => ({
-      admin,
+  // An admin session can come from EITHER:
+  //   1. The legacy `admin/admin123` credentials (bootstrap admin —
+  //      remains so the very first time you set the site up there is
+  //      always a way in)
+  //   2. A signed-in Firebase user whose profile has role='admin'
+  // Both grant the same `isAdmin` privilege so every guard in the app
+  // can stay a single boolean check.
+  const { user: firebaseUser, isAdmin: firebaseIsAdmin } = useAuth()
+  const isAdmin = !!admin || firebaseIsAdmin
+
+  const value = useMemo(() => {
+    const effectiveAdmin = admin
+      ? admin
+      : firebaseIsAdmin && firebaseUser
+      ? {
+          username: firebaseUser.email || firebaseUser.id,
+          name: firebaseUser.fullName || 'Admin',
+          email: firebaseUser.email || '',
+          role: firebaseUser.role || 'admin',
+          loggedInAt: new Date().toISOString(),
+          viaFirebase: true,
+        }
+      : null
+
+    return {
+      admin: effectiveAdmin,
       profile,
-      isAdmin: !!admin,
+      isAdmin,
+      adminViaFirebase: !admin && firebaseIsAdmin,
       defaultUsername: ADMIN_USERNAME,
       isUsingDefaultPassword: password === DEFAULT_PASSWORD,
       login,
@@ -230,18 +255,20 @@ export function AdminProvider({ children }) {
       updateProfile,
       changePassword,
       resetPasswordToDefault,
-    }),
-    [
-      admin,
-      profile,
-      password,
-      login,
-      logout,
-      updateProfile,
-      changePassword,
-      resetPasswordToDefault,
-    ]
-  )
+    }
+  }, [
+    admin,
+    firebaseUser,
+    firebaseIsAdmin,
+    isAdmin,
+    profile,
+    password,
+    login,
+    logout,
+    updateProfile,
+    changePassword,
+    resetPasswordToDefault,
+  ])
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>
 }

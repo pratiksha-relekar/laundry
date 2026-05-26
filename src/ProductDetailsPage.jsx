@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { productMap } from './data/products'
 import { categoryMap } from './data/categories'
 import { useNavigation } from './context/NavigationContext'
-import { useUserAds } from './context/UserAdsContext'
+import { useProducts } from './context/ProductsContext'
 import {
   ArrowLeftIcon,
   FlagIcon,
@@ -20,10 +19,8 @@ function formatPrice(n) {
 
 export default function ProductDetailsPage({ productId }) {
   const { goHome } = useNavigation()
-  const { getAd } = useUserAds()
-  // Catalog products take precedence; fall back to user-posted ads so the
-  // seller can preview their own listing exactly like a buyer sees it.
-  const product = productMap[productId] || getAd(productId)
+  const { getProduct } = useProducts()
+  const product = getProduct(productId)
   const [liked, setLiked] = useState(false)
 
   if (!product) {
