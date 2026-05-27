@@ -14,6 +14,7 @@ import ChatsPage from './ChatsPage'
 import MyAdsPage from './MyAdsPage'
 import AccountPage from './AccountPage'
 import SellPage from './SellPage'
+import EditAdPage from './EditAdPage'
 import AdminLoginPage from './admin/AdminLoginPage'
 import AdminDashboardPage from './admin/AdminDashboardPage'
 import AdminProductsPage from './admin/AdminProductsPage'
@@ -21,6 +22,7 @@ import AdminUsersPage from './admin/AdminUsersPage'
 import AdminReviewsPage from './admin/AdminReviewsPage'
 import AdminAnalyticsPage from './admin/AdminAnalyticsPage'
 import AdminSettingsPage from './admin/AdminSettingsPage'
+import CategoryBrowsePage from './components/CategoryBrowsePage'
 import { useSearch } from './context/SearchContext'
 import { useNavigation } from './context/NavigationContext'
 import { useAdmin } from './context/AdminContext'
@@ -34,6 +36,7 @@ const SECONDARY_VIEWS = new Set([
   'my-ads',
   'account',
   'sell',
+  'edit-ad',
 ])
 
 const ADMIN_VIEWS = new Set([
@@ -48,7 +51,7 @@ const ADMIN_VIEWS = new Set([
 
 export default function DesktopView() {
   const { isFiltering, submittedQuery, allProductsByCategory } = useSearch()
-  const { view, productId, goAdminLogin } = useNavigation()
+  const { view, productId, goAdminLogin, goHome } = useNavigation()
   const { isAdmin } = useAdmin()
   const onAdmin = ADMIN_VIEWS.has(view)
 
@@ -73,6 +76,7 @@ export default function DesktopView() {
   const onDetails = view === 'details'
   const onAuth = view === 'login' || view === 'signup'
   const onSecondary = SECONDARY_VIEWS.has(view)
+  const onCategory = view === 'category'
 
   let filteringLabel = ''
   if (isFiltering) {
@@ -86,12 +90,15 @@ export default function DesktopView() {
   else if (view === 'my-ads') secondaryPage = <MyAdsPage />
   else if (view === 'account') secondaryPage = <AccountPage />
   else if (view === 'sell') secondaryPage = <SellPage />
+  else if (view === 'edit-ad') secondaryPage = <EditAdPage productId={productId} />
 
   return (
     <div className="lx-app">
       <Header />
       {!onDetails && !onAuth && !onSecondary && <CategoryNav />}
-      {!onDetails && !onAuth && !onSecondary && !isFiltering && <HeroBanner />}
+      {!onDetails && !onAuth && !onSecondary && !isFiltering && !onCategory && (
+        <HeroBanner />
+      )}
 
       {onAuth ? (
         <main className="lx-main lx-main-auth">
@@ -103,17 +110,26 @@ export default function DesktopView() {
         <main className="lx-main lx-main-details">
           <ProductDetailsPage productId={productId} />
         </main>
+      ) : onCategory ? (
+        <main className="lx-main">
+          <Sidebar />
+          <div className="lx-content">
+            <CategoryBrowsePage />
+          </div>
+        </main>
       ) : (
         <>
           <div className="lx-breadcrumb-wrap">
             <div className="lx-breadcrumb">
-              <a href="#">Home</a>
+              <button type="button" className="bc-link" onClick={goHome}>
+                Home
+              </button>
               <span className="bc-sep">/</span>
-              <a href="#">
+              <span className="bc-current">
                 {isFiltering
                   ? `Filtered results${filteringLabel ? ` · ${filteringLabel}` : ''}`
                   : 'Laundry Equipment'}
-              </a>
+              </span>
             </div>
             <h1 className="lx-page-title">
               {isFiltering

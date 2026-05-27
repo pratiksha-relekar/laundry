@@ -71,8 +71,14 @@ function ChatListItem({ chat, active, onClick }) {
   )
 }
 
+const DELETE_CHAT_CONFIRM =
+  'Delete this conversation from your inbox?\n\n' +
+  '• Removed only for you — the other person still has the full chat history.\n' +
+  '• If they message you again, the conversation will come back here.'
+
 function ChatThread({ chat, onBack, onSend, onDelete }) {
   const [text, setText] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const listRef = useRef(null)
 
   const messageCount = chat?.messages?.length ?? 0
@@ -100,6 +106,19 @@ function ChatThread({ chat, onBack, onSend, onDelete }) {
     if (!text.trim()) return
     onSend(chat.id, text)
     setText('')
+  }
+
+  const handleDelete = async () => {
+    if (!chat || deleting) return
+    if (!window.confirm(DELETE_CHAT_CONFIRM)) return
+    setDeleting(true)
+    const result = await onDelete(chat.id)
+    setDeleting(false)
+    if (result?.ok) {
+      onBack()
+    } else if (result?.error) {
+      window.alert(result.error)
+    }
   }
 
   return (
@@ -134,8 +153,10 @@ function ChatThread({ chat, onBack, onSend, onDelete }) {
         <button
           type="button"
           className="chat-thread-delete"
-          aria-label="Delete chat"
-          onClick={() => onDelete(chat.id)}
+          aria-label="Delete chat from your inbox"
+          title="Delete from your inbox"
+          disabled={deleting}
+          onClick={handleDelete}
         >
           <TrashIcon size={16} />
         </button>
@@ -190,7 +211,7 @@ export default function ChatsPage() {
   const { goHome } = useNavigation()
 
   return (
-    <div className="lx-page chats-page">
+    <div className={`lx-page chats-page ${activeId ? 'chats-thread-open' : ''}`}>
       <div className="lx-page-head">
         <button type="button" className="details-back" onClick={goHome}>
           <ArrowLeftIcon size={16} /> Back to home

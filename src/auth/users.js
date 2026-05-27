@@ -423,6 +423,39 @@ export async function bumpAdsCount(id, delta = 1) {
 }
 
 /**
+ * When a seller has zero live listings, demote primary role to buyer (`user`).
+ * Admins are never demoted. Returns true if the profile was updated.
+ *
+ * @param {string} sellerId — user doc id (email key)
+ * @param {number} listingCount — live count from `countSellerProducts`
+ */
+export async function demoteToBuyerIfNoListings(sellerId, listingCount) {
+  const id = emailKey(sellerId)
+  if (!id || listingCount > 0) return false
+
+  const snap = await getDoc(userDocRef(id))
+  if (!snap.exists()) return false
+
+  const data = snap.data()
+  const roles = Array.isArray(data.roles) ? data.roles : []
+
+  if (data.role === ROLES.ADMIN || roles.includes(ROLES.ADMIN)) {
+    return false
+  }
+
+  const isSeller =
+    data.role === ROLES.SELLER || roles.includes(ROLES.SELLER)
+  if (!isSeller) return false
+
+  await updateDoc(userDocRef(id), {
+    role: ROLES.USER,
+    roles: rolesForPrimary(ROLES.USER),
+    adsCount: 0,
+  })
+  return true
+}
+
+/**
  * Map a Firebase Auth `error.code` into the
  * `{ field, error }` shape the auth UI already understands.
  */

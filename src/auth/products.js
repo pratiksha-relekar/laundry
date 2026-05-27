@@ -28,6 +28,8 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
+  increment,
   onSnapshot,
   query,
   serverTimestamp,
@@ -176,9 +178,40 @@ export async function updateProduct(productId, patch) {
   await updateDoc(productDocRef(productId), patch)
 }
 
+/** Bump listing view count (Firestore user/admin products only). */
+export async function incrementProductViews(productId) {
+  if (!productId) return
+  try {
+    await updateDoc(productDocRef(productId), { views: increment(1) })
+  } catch (err) {
+    console.warn('[products] increment views failed:', err?.message)
+  }
+}
+
+/** Bump listing chat count when a new buyer thread is created. */
+export async function incrementProductChats(productId) {
+  if (!productId) return
+  try {
+    await updateDoc(productDocRef(productId), { chats: increment(1) })
+  } catch (err) {
+    console.warn('[products] increment chats failed:', err?.message)
+  }
+}
+
 export async function deleteProduct(productId) {
   if (!productId) return
   await deleteDoc(productDocRef(productId))
+}
+
+/**
+ * Count live listings for a seller (source of truth for role demotion).
+ * Requires a single-field index on `products.sellerId` (auto-created).
+ */
+export async function countSellerProducts(sellerId) {
+  if (!sellerId) return 0
+  const q = query(productsCollectionRef(), where('sellerId', '==', sellerId))
+  const snap = await getDocs(q)
+  return snap.size
 }
 
 // ---------------------------------------------------------------------

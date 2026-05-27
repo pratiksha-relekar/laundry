@@ -7,7 +7,6 @@ import {
   ArrowLeftIcon,
   EditIcon,
   EyeStatsIcon,
-  HeartIcon,
   PackageIcon,
   PlusIcon,
   TrashIcon,
@@ -25,7 +24,7 @@ const TABS = [
   { id: 'sold', label: 'Sold' },
 ]
 
-function MyAdRow({ ad, onOpen, onDelete }) {
+function MyAdRow({ ad, onOpen, onEdit, onDelete }) {
   return (
     <article className="myad-row">
       <button type="button" className="myad-thumb" onClick={() => onOpen(ad.id)}>
@@ -53,10 +52,6 @@ function MyAdRow({ ad, onOpen, onDelete }) {
             <strong>{ad.views ?? 0}</strong> views
           </span>
           <span>
-            <HeartIcon size={14} />
-            <strong>{ad.favs ?? 0}</strong> saves
-          </span>
-          <span>
             <UserIcon size={14} />
             <strong>{ad.chats ?? 0}</strong> chats
           </span>
@@ -64,7 +59,11 @@ function MyAdRow({ ad, onOpen, onDelete }) {
       </div>
 
       <div className="myad-actions">
-        <button type="button" className="myad-action">
+        <button
+          type="button"
+          className="myad-action"
+          onClick={() => onEdit(ad.id)}
+        >
           <EditIcon size={14} /> Edit
         </button>
         <button
@@ -81,7 +80,8 @@ function MyAdRow({ ad, onOpen, onDelete }) {
 
 export default function MyAdsPage() {
   const { user } = useAuth()
-  const { goHome, goLogin, goSell, goWishlist, openProduct } = useNavigation()
+  const { goHome, goLogin, goSell, goWishlist, openProduct, goEditAd } =
+    useNavigation()
   const { ads, removeAd } = useUserAds()
   const { count: wishlistCount } = useWishlist()
 
@@ -215,6 +215,7 @@ export default function MyAdsPage() {
               key={ad.id}
               ad={ad}
               onOpen={openProduct}
+              onEdit={goEditAd}
               onDelete={removeAd}
             />
           ))}

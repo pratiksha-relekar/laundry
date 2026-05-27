@@ -12,12 +12,13 @@ import {
   createCategory as fbCreateCategory,
   createProduct as fbCreateProduct,
   deleteCategory as fbDeleteCategory,
+  countSellerProducts,
   deleteProduct as fbDeleteProduct,
   subscribeToAllProducts,
   subscribeToCategories,
   updateProduct as fbUpdateProduct,
 } from '../auth/products'
-import { bumpAdsCount } from '../auth/users'
+import { bumpAdsCount, demoteToBuyerIfNoListings } from '../auth/users'
 
 // =====================================================================
 // ProductsContext
@@ -144,7 +145,12 @@ export function ProductsProvider({ children }) {
 
   const removeProduct = useCallback(async (id, ownerId) => {
     await fbDeleteProduct(id)
-    if (ownerId) bumpAdsCount(ownerId, -1).catch(() => {})
+    if (!ownerId) return { demoted: false, remaining: null }
+
+    bumpAdsCount(ownerId, -1).catch(() => {})
+    const remaining = await countSellerProducts(ownerId)
+    const demoted = await demoteToBuyerIfNoListings(ownerId, remaining)
+    return { demoted, remaining }
   }, [])
 
   const addCategory = useCallback(async (payload) => {

@@ -389,6 +389,21 @@ export function AuthProvider({ children }) {
     }
   }, [user])
 
+  /** Re-read Firestore profile after role changes (e.g. seller → buyer). */
+  const refreshUserProfile = useCallback(async () => {
+    const authUser = auth.currentUser
+    if (!authUser) return
+    await hydrateUser(authUser)
+  }, [hydrateUser])
+
+  const applyBuyerRoleLocally = useCallback(() => {
+    setUser((prev) =>
+      prev
+        ? { ...prev, role: ROLES.USER, roles: [ROLES.USER], adsCount: 0 }
+        : prev
+    )
+  }, [])
+
   const role = user?.role || ROLES.USER
   const isAdmin = userIsAdmin(user)
   const isSeller = userIsSeller(user)
@@ -407,6 +422,8 @@ export function AuthProvider({ children }) {
       logout,
       updateProfile,
       becomeSeller,
+      refreshUserProfile,
+      applyBuyerRoleLocally,
     }),
     [
       user,
@@ -420,6 +437,8 @@ export function AuthProvider({ children }) {
       logout,
       updateProfile,
       becomeSeller,
+      refreshUserProfile,
+      applyBuyerRoleLocally,
     ]
   )
 

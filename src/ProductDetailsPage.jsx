@@ -1,9 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { incrementProductViews } from './auth/products'
 import { categoryMap } from './data/categories'
+import { useAuth } from './context/AuthContext'
 import { useNavigation } from './context/NavigationContext'
 import { useProducts } from './context/ProductsContext'
+import { useWishlist } from './context/WishlistContext'
+import { shareProduct } from './utils/productShare'
 import {
   ArrowLeftIcon,
+  CheckIcon,
   FlagIcon,
   HeartIcon,
   ShareIcon,
@@ -18,10 +23,20 @@ function formatPrice(n) {
 }
 
 export default function ProductDetailsPage({ productId }) {
-  const { goHome } = useNavigation()
+  const { goHome, goLogin } = useNavigation()
+  const { user } = useAuth()
   const { getProduct } = useProducts()
+  const { isInWishlist, toggle } = useWishlist()
   const product = getProduct(productId)
-  const [liked, setLiked] = useState(false)
+  const [shareNote, setShareNote] = useState('')
+  const viewedIds = useRef(new Set())
+
+  useEffect(() => {
+    if (!product?.id || product.source === 'catalog') return
+    if (viewedIds.current.has(product.id)) return
+    viewedIds.current.add(product.id)
+    incrementProductViews(product.id)
+  }, [product?.id, product?.source])
 
   if (!product) {
     return (
@@ -35,10 +50,33 @@ export default function ProductDetailsPage({ productId }) {
   }
 
   const category = categoryMap[product.category]
+  const liked = isInWishlist(product.id)
+
+  const handleShare = async () => {
+    const result = await shareProduct(product)
+    if (result.cancelled) return
+    if (result.ok) {
+      setShareNote(
+        result.method === 'clipboard'
+          ? 'Link copied to clipboard'
+          : 'Thanks for sharing!'
+      )
+    } else {
+      setShareNote('Could not share — try copying the link from the address bar')
+    }
+    window.setTimeout(() => setShareNote(''), 3200)
+  }
+
+  const handleWishlist = async () => {
+    if (!user) {
+      goLogin()
+      return
+    }
+    await toggle(product.id)
+  }
 
   return (
     <div className="details-page">
-      {/* Breadcrumb / back row */}
       <div className="lx-breadcrumb-wrap">
         <button type="button" className="details-back" onClick={goHome}>
           <ArrowLeftIcon size={16} /> Back to listings
@@ -57,7 +95,6 @@ export default function ProductDetailsPage({ productId }) {
       </div>
 
       <main className="details-main">
-        {/* ----- LEFT column ----- */}
         <div className="details-left">
           <div className="details-card details-gallery-card">
             <ImageCarousel images={product.images} alt={product.title} />
@@ -66,12 +103,14 @@ export default function ProductDetailsPage({ productId }) {
           <div className="details-card details-description">
             <h2>Description</h2>
             <p>
-              {product.description.split('\n').map((line, i) => (
-                <span key={i}>
-                  {line}
-                  <br />
-                </span>
-              ))}
+              {(product.description || 'No description provided.')
+                .split('\n')
+                .map((line, i) => (
+                  <span key={i}>
+                    {line}
+                    <br />
+                  </span>
+                ))}
             </p>
           </div>
 
@@ -121,26 +160,31 @@ export default function ProductDetailsPage({ productId }) {
             <span>
               AD ID <strong>{product.adId}</strong>
             </span>
-            <button type="button" className="details-report">
-              <FlagIcon size={14} /> REPORT THIS AD
-            </button>
           </div>
         </div>
 
-        {/* ----- RIGHT column ----- */}
         <aside className="details-right">
           <section className="details-card details-summary">
+            {shareNote && (
+              <p className="details-toast" role="status">
+                <CheckIcon size={14} /> {shareNote}
+              </p>
+            )}
             <div className="details-price-row">
               <div className="details-price">{formatPrice(product.price)}</div>
               <div className="details-summary-actions">
-                <button type="button" aria-label="Share">
+                <button
+                  type="button"
+                  aria-label="Share listing"
+                  onClick={handleShare}
+                >
                   <ShareIcon size={18} />
                 </button>
                 <button
                   type="button"
-                  aria-label={liked ? 'Remove from wishlist' : 'Save'}
+                  aria-label={liked ? 'Remove from wishlist' : 'Save to wishlist'}
                   className={liked ? 'is-liked' : ''}
-                  onClick={() => setLiked((v) => !v)}
+                  onClick={handleWishlist}
                 >
                   <HeartIcon size={18} filled={liked} />
                 </button>
@@ -153,7 +197,11 @@ export default function ProductDetailsPage({ productId }) {
             </div>
           </section>
 
-          <SellerCard seller={product.seller} productId={product.id} />
+          <SellerCard
+            seller={product.seller}
+            productId={product.id}
+            product={product}
+          />
 
           <LocationMap location={product.location} />
         </aside>

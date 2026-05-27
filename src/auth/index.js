@@ -41,6 +41,7 @@ export {
   clearWishlist,
   // seller counter
   bumpAdsCount,
+  demoteToBuyerIfNoListings,
 } from './users'
 
 export {
@@ -69,6 +70,7 @@ export {
   createProduct,
   updateProduct,
   deleteProduct,
+  countSellerProducts,
   subscribeToCategories,
   createCategory,
   deleteCategory,

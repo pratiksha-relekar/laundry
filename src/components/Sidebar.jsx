@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
-import { categories } from '../data/categories'
+import {
+  categories,
+  getSubcategoryCounts,
+} from '../data/categories'
 import { ChevronDown, ChevronUp } from './Icons'
 import CategoryIcon from './CategoryIcon'
+import SubcategoryList from './SubcategoryList'
+import { useNavigation } from '../context/NavigationContext'
 import { useSearch } from '../context/SearchContext'
 
 function Section({ title, defaultOpen = true, children }) {
@@ -21,22 +26,32 @@ function Section({ title, defaultOpen = true, children }) {
   )
 }
 
-function CategoryTree({ active, onPick }) {
+function CategoryTree({
+  activeCategory,
+  activeSubSlug,
+  onPickCategory,
+  onPickSubcategory,
+  countFor,
+  subCountsFor,
+}) {
   return (
     <ul className="cat-tree">
-      <li className={`cat-tree-row lvl-0 ${active === 'all' ? 'active' : ''}`}>
-        <button type="button" onClick={() => onPick('all')}>
+      <li
+        className={`cat-tree-row lvl-0 ${activeCategory === 'all' ? 'active' : ''}`}
+      >
+        <button type="button" onClick={() => onPickCategory('all')}>
           <span>All Categories</span>
         </button>
       </li>
       {categories.map((c) => {
-        const isActive = active === c.id
+        const isActive = activeCategory === c.id
+        const subCounts = subCountsFor(c)
         return (
           <li
             key={c.id}
             className={`cat-tree-row lvl-1 ${isActive ? 'active' : ''}`}
           >
-            <button type="button" onClick={() => onPick(c.id)}>
+            <button type="button" onClick={() => onPickCategory(c.id)}>
               <span className="cat-tree-name">
                 <span
                   className="cat-tree-icon"
@@ -48,17 +63,15 @@ function CategoryTree({ active, onPick }) {
                 {c.name}
               </span>
               <span className="cat-tree-count">
-                ({c.count.toLocaleString('en-IN')})
+                ({countFor(c.id, c.count)})
               </span>
             </button>
-            {isActive && c.subcategories?.length > 0 && (
-              <ul className="cat-tree-subs">
-                {c.subcategories.map((s) => (
-                  <li key={s}>
-                    <a href="#">{s}</a>
-                  </li>
-                ))}
-              </ul>
+            {isActive && subCounts.length > 0 && (
+              <SubcategoryList
+                items={subCounts}
+                activeSlug={activeSubSlug}
+                onPick={(sub) => onPickSubcategory(c.id, sub.slug)}
+              />
             )}
           </li>
         )
@@ -84,7 +97,6 @@ function BudgetFilter() {
   const [min, setMin] = useState('')
   const [max, setMax] = useState('')
 
-  // Keep local inputs in sync if budget is changed externally (e.g. preset).
   useEffect(() => {
     setMin(minPrice == null ? '' : String(minPrice))
     setMax(maxPrice == null ? '' : String(maxPrice))
@@ -169,35 +181,34 @@ function BudgetFilter() {
 }
 
 export default function Sidebar() {
-  const [active, setActive] = useState(categories[0].id)
+  const { categoryId, subcategorySlug, goHome, goCategory, goSubcategory } =
+    useNavigation()
+  const { allProductsByCategory } = useSearch()
+
+  const countFor = (id, fallback) => {
+    const live = allProductsByCategory[id]?.length
+    return (live ?? fallback).toLocaleString('en-IN')
+  }
+
+  const subCountsFor = (cat) =>
+    getSubcategoryCounts(cat, allProductsByCategory[cat.id] || [])
+
+  const onPickCategory = (id) => {
+    if (id === 'all') goHome()
+    else goCategory(id)
+  }
+
   return (
     <aside className="lx-sidebar">
       <Section title="CATEGORIES" defaultOpen={true}>
-        <CategoryTree active={active} onPick={setActive} />
-      </Section>
-      <Section title="FILTERS" defaultOpen={true}>
-        <ul className="check-list">
-          <li>
-            <label>
-              <input type="checkbox" /> Verified seller
-            </label>
-          </li>
-          <li>
-            <label>
-              <input type="checkbox" /> With images
-            </label>
-          </li>
-          <li>
-            <label>
-              <input type="checkbox" /> Under warranty
-            </label>
-          </li>
-          <li>
-            <label>
-              <input type="checkbox" /> Free delivery
-            </label>
-          </li>
-        </ul>
+        <CategoryTree
+          activeCategory={categoryId ? categoryId : 'all'}
+          activeSubSlug={subcategorySlug}
+          onPickCategory={onPickCategory}
+          onPickSubcategory={goSubcategory}
+          countFor={countFor}
+          subCountsFor={subCountsFor}
+        />
       </Section>
       <Section title="BUDGET" defaultOpen={true}>
         <BudgetFilter />

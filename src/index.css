@@ -56,6 +56,14 @@
   --warning-bg: #fef7e0;
   --warning-text: #b54708;
 
+  /* Footer (OLX-style deep teal — matches brand text color) */
+  --footer-bg: #002f34;
+  --footer-heading: #ffffff;
+  --footer-link: #c4c9cc;
+  --footer-link-hover: #ffffff;
+  --footer-border: #1a4045;
+  --footer-muted: #8b9599;
+
   /* Misc */
   --shadow-sm: rgba(15, 23, 42, 0.06);
   --shadow-md: rgba(15, 23, 42, 0.12);
@@ -114,6 +122,13 @@
 
   --warning-bg: #2e2410;
   --warning-text: #f7c87a;
+
+  --footer-bg: #0a0c12;
+  --footer-heading: #f3f4f6;
+  --footer-link: #a4adba;
+  --footer-link-hover: #ffffff;
+  --footer-border: #2c313b;
+  --footer-muted: #8b94a3;
 
   /* Misc */
   --shadow-sm: rgba(0, 0, 0, 0.3);

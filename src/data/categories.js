@@ -163,11 +163,77 @@ export const popularSearches = [
   'industrial washing machine',
   'dry cleaning machine',
   'tumble dryer',
-  'steam press',
-  'garment steamer',
-  'fully automatic',
-  'semi automatic',
-  'calendar ironer',
-  'carpet cleaner',
-  'voltage stabilizer',
 ]
+
+/** URL-safe slug for a subcategory label. */
+export function subcategorySlug(name) {
+  return (name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
+/** Resolve a subcategory slug back to its display name within a category. */
+export function findSubcategoryName(categoryId, slug) {
+  const cat = categoryMap[categoryId]
+  if (!cat || !slug) return null
+  return (
+    (cat.subcategories || []).find((s) => subcategorySlug(s) === slug) || null
+  )
+}
+
+function productMatchesSubcategory(product, subName) {
+  if (!subName) return true
+  if (
+    product.subcategory &&
+    product.subcategory.toLowerCase() === subName.toLowerCase()
+  ) {
+    return true
+  }
+  const tokens = subName
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 2)
+  const hay = [product.title, product.description, product.brand, product.subcategory]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  const significant = tokens.filter(
+    (t) => !['machines', 'machine', 'equipment', 'systems'].includes(t)
+  )
+  const check = significant.length > 0 ? significant : tokens
+  return check.every((t) => hay.includes(t))
+}
+
+/** Products in a category that match a given subcategory label. */
+export function filterProductsBySubcategory(products, subName) {
+  if (!subName) return products
+  return products.filter((p) => productMatchesSubcategory(p, subName))
+}
+
+/**
+ * Counts for every subcategory under a category. Uses live product
+ * matches when available; otherwise splits the static category total.
+ */
+export function getSubcategoryCounts(category, products = []) {
+  const subs = category?.subcategories || []
+  if (subs.length === 0) return []
+
+  const live = subs.map((name) => ({
+    name,
+    slug: subcategorySlug(name),
+    count: filterProductsBySubcategory(products, name).length,
+  }))
+
+  const liveTotal = live.reduce((s, x) => s + x.count, 0)
+  if (liveTotal > 0) return live
+
+  const total = category.count || 0
+  const base = Math.floor(total / subs.length)
+  let remainder = total - base * subs.length
+  return subs.map((name, i) => ({
+    name,
+    slug: subcategorySlug(name),
+    count: base + (i < remainder ? 1 : 0),
+  }))
+}

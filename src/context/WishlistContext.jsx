@@ -46,7 +46,7 @@ export function WishlistProvider({ children }) {
 
   const toggle = useCallback(
     async (productId) => {
-      if (!uid || !productId) return
+      if (!uid || !productId) return false
       const inList = activeIds.includes(productId)
       setIds((prev) =>
         inList
@@ -65,6 +65,7 @@ export function WishlistProvider({ children }) {
             : prev.filter((x) => x !== productId)
         )
       }
+      return true
     },
     [uid, activeIds]
   )

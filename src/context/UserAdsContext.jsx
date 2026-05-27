@@ -2,8 +2,12 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
 } from 'react'
+import { countSellerProducts } from '../auth/products'
+import { demoteToBuyerIfNoListings, userIsAdmin, userIsSeller } from '../auth/users'
 import { useAuth } from './AuthContext'
 import { useProducts } from './ProductsContext'
 
@@ -14,10 +18,8 @@ import { useProducts } from './ProductsContext'
 // belonging to the signed-in seller. Writes go through the global
 // products collection so every visitor sees the new ad immediately.
 //
-// Each ad lives in the top-level Firestore `products` collection with
-// a `sellerId` matching the user's UID. On logout we simply expose an
-// empty list — the Firestore docs persist and reload when the same
-// user signs back in.
+// When a seller deletes their last listing, role is demoted to buyer
+// (`user`) automatically — see demoteToBuyerIfNoListings.
 // =====================================================================
 
 const UserAdsContext = createContext(null)
@@ -27,16 +29,46 @@ function makeAdId() {
 }
 
 export function UserAdsProvider({ children }) {
-  const { user } = useAuth()
+  const { user, refreshUserProfile, applyBuyerRoleLocally } = useAuth()
   const uid = user?.id || null
   const { marketplaceProducts, addProduct, updateProduct, removeProduct } =
     useProducts()
 
-  // Filter the global stream down to the current user's listings.
   const ads = useMemo(() => {
     if (!uid) return []
     return marketplaceProducts.filter((p) => p.sellerId === uid)
   }, [marketplaceProducts, uid])
+
+  const syncSellerRoleFromListings = useCallback(async () => {
+    if (!uid || !user) return
+    if (userIsAdmin(user)) return
+    if (!userIsSeller(user)) return
+
+    const remaining = await countSellerProducts(uid)
+    if (remaining > 0) return
+
+    const demoted = await demoteToBuyerIfNoListings(uid, remaining)
+    if (demoted) {
+      applyBuyerRoleLocally()
+      refreshUserProfile().catch(() => {})
+    }
+  }, [uid, user, applyBuyerRoleLocally, refreshUserProfile])
+
+  const demoteChecked = useRef(false)
+
+  useEffect(() => {
+    if (!uid || !user || userIsAdmin(user) || !userIsSeller(user)) {
+      demoteChecked.current = false
+      return
+    }
+    if (ads.length > 0) {
+      demoteChecked.current = false
+      return
+    }
+    if (demoteChecked.current) return
+    demoteChecked.current = true
+    syncSellerRoleFromListings()
+  }, [ads.length, uid, user, syncSellerRoleFromListings])
 
   const postAd = useCallback(
     async (data) => {
@@ -60,9 +92,16 @@ export function UserAdsProvider({ children }) {
         chats: 0,
         favs: 0,
         isUserAd: true,
-        seller: data.seller || {
-          id: uid,
-          name: user?.fullName || 'Seller',
+        phone: data.phone || '',
+        seller: {
+          ...(data.seller || {
+            id: uid,
+            name: user?.fullName || 'Seller',
+          }),
+          phone: data.phone || '',
+          phoneMasked:
+            data.seller?.phoneMasked ||
+            (data.phone ? data.phone.replace(/\d(?=\d{4})/g, 'x') : ''),
         },
       }
       return await addProduct(ad, uid)
@@ -72,26 +111,43 @@ export function UserAdsProvider({ children }) {
 
   const updateAd = useCallback(
     async (id, updates) => {
-      if (!uid) return
-      try {
-        await updateProduct(id, updates)
-      } catch (err) {
-        console.warn('[userAds] update failed:', err?.message)
+      if (!uid) throw new Error('You must be logged in to update an ad.')
+      const owned = marketplaceProducts.find(
+        (p) => p.id === id && p.sellerId === uid
+      )
+      if (!owned) throw new Error('You can only edit your own listings.')
+
+      const patch = { ...updates }
+      if (Array.isArray(patch.images)) {
+        patch.image = patch.images[0] || patch.image || ''
       }
+      await updateProduct(id, patch)
     },
-    [uid, updateProduct]
+    [uid, marketplaceProducts, updateProduct]
   )
 
   const removeAd = useCallback(
     async (id) => {
       if (!uid) return
       try {
-        await removeProduct(id, uid)
+        const { demoted } = await removeProduct(id, uid)
+        if (demoted) {
+          applyBuyerRoleLocally()
+          refreshUserProfile().catch(() => {})
+        } else {
+          await syncSellerRoleFromListings()
+        }
       } catch (err) {
         console.warn('[userAds] delete failed:', err?.message)
       }
     },
-    [uid, removeProduct]
+    [
+      uid,
+      removeProduct,
+      applyBuyerRoleLocally,
+      refreshUserProfile,
+      syncSellerRoleFromListings,
+    ]
   )
 
   const getAd = useCallback(

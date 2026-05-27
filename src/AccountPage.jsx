@@ -289,17 +289,7 @@ function SettingsSection() {
         />
       </div>
 
-      <div className="account-card account-card-danger">
-        <div>
-          <h4>
-            <LockIcon size={14} /> Change password
-          </h4>
-          <p>For security, password changes are sent to your email.</p>
-        </div>
-        <button type="button" className="auth-google account-card-btn">
-          Request reset link
-        </button>
-      </div>
+      {/* Password reset link removed (handled outside this UI). */}
 
       <div className="account-form-actions">
         <button

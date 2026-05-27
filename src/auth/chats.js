@@ -41,6 +41,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { incrementProductChats } from './products'
 import { emailKey } from './users'
 
 const CHATS_COLLECTION = 'chats'
@@ -238,6 +239,7 @@ export async function ensureChat({
     hiddenFor: [],
     createdAt: serverTimestamp(),
   })
+  incrementProductChats(productId).catch(() => {})
   return chatId
 }
 
@@ -295,14 +297,19 @@ export async function markChatRead(chatId, viewerEmail) {
 }
 
 /**
- * Soft-delete a chat from a single user's inbox. The other party
- * keeps the thread; if they send a new message it pops back into the
- * deleter's inbox (see `sendChatMessage`).
+ * Soft-delete from one user's inbox only. The other party keeps the
+ * thread; a new message from them clears `hiddenFor` and restores it
+ * (see `sendChatMessage`).
  */
 export async function hideChatForUser(chatId, viewerEmail) {
   const viewer = emailKey(viewerEmail)
-  if (!chatId || !viewer) return
-  await updateDoc(chatDocRef(chatId), { hiddenFor: arrayUnion(viewer) })
+  if (!chatId || !viewer) {
+    throw new Error('hideChatForUser: missing chat or user')
+  }
+  await updateDoc(chatDocRef(chatId), {
+    hiddenFor: arrayUnion(viewer),
+    unreadFor: arrayRemove(viewer),
+  })
 }
 
 /**

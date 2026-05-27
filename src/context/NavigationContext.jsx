@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { categoryMap } from '../data/categories'
 
 // =====================================================================
 // NavigationContext
@@ -20,6 +21,8 @@ import {
 //
 // Hash format:
 //   #home              — landing page (we also accept an empty hash)
+//   #category/<id>     — browse a main category
+//   #category/<id>/<subSlug> — browse a subcategory
 //   #details/<id>      — product details page
 //   #login             — login screen
 //   #signup            — signup screen
@@ -28,6 +31,7 @@ import {
 //   #my-ads            — current user's listings
 //   #account           — account hub
 //   #sell              — post-an-ad form
+//   #edit-ad/<id>      — edit one of your listings
 //   #admin-login       — admin sign-in screen
 //   #admin-dashboard   — admin control panel
 //   #admin-products    — admin products & categories management
@@ -58,25 +62,75 @@ const KNOWN_VIEWS = new Set([
 ])
 
 /**
- * Parse `window.location.hash` into `{ view, productId }`. Unknown
- * hashes fall back to the home view so bad URLs never break the app.
+ * Parse `window.location.hash` into
+ * `{ view, productId, categoryId, subcategorySlug }`.
+ * Unknown hashes fall back to the home view so bad URLs never break the app.
  */
 function parseHash(hash) {
   const raw = (hash || '').replace(/^#\/?/, '').trim()
-  if (!raw) return { view: 'home', productId: null }
+  if (!raw) {
+    return { view: 'home', productId: null, categoryId: null, subcategorySlug: null }
+  }
   if (raw.startsWith('details/')) {
     const id = decodeURIComponent(raw.slice('details/'.length))
-    return { view: 'details', productId: id || null }
+    return {
+      view: 'details',
+      productId: id || null,
+      categoryId: null,
+      subcategorySlug: null,
+    }
   }
-  if (KNOWN_VIEWS.has(raw)) return { view: raw, productId: null }
-  return { view: 'home', productId: null }
+  if (raw.startsWith('edit-ad/')) {
+    const id = decodeURIComponent(raw.slice('edit-ad/'.length))
+    return {
+      view: 'edit-ad',
+      productId: id || null,
+      categoryId: null,
+      subcategorySlug: null,
+    }
+  }
+  if (raw.startsWith('category/')) {
+    const parts = raw.slice('category/'.length).split('/')
+    const categoryId = decodeURIComponent(parts[0] || '')
+    const subcategorySlug = parts[1]
+      ? decodeURIComponent(parts[1])
+      : null
+    if (categoryMap[categoryId]) {
+      return {
+        view: 'category',
+        productId: null,
+        categoryId,
+        subcategorySlug,
+      }
+    }
+  }
+  if (KNOWN_VIEWS.has(raw)) {
+    return {
+      view: raw,
+      productId: null,
+      categoryId: null,
+      subcategorySlug: null,
+    }
+  }
+  return { view: 'home', productId: null, categoryId: null, subcategorySlug: null }
 }
 
 /** Inverse of `parseHash`. Home stays as an empty hash so `/` is clean. */
-function buildHash(view, productId) {
+function buildHash(view, productId, categoryId, subcategorySlug) {
   if (view === 'home') return ''
-  if (view === 'details' && productId)
+  if (view === 'details' && productId) {
     return '#details/' + encodeURIComponent(productId)
+  }
+  if (view === 'edit-ad' && productId) {
+    return '#edit-ad/' + encodeURIComponent(productId)
+  }
+  if (view === 'category' && categoryId) {
+    let hash = '#category/' + encodeURIComponent(categoryId)
+    if (subcategorySlug) {
+      hash += '/' + encodeURIComponent(subcategorySlug)
+    }
+    return hash
+  }
   return '#' + view
 }
 
@@ -87,7 +141,14 @@ function scrollTop() {
 }
 
 function readInitial() {
-  if (typeof window === 'undefined') return { view: 'home', productId: null }
+  if (typeof window === 'undefined') {
+    return {
+      view: 'home',
+      productId: null,
+      categoryId: null,
+      subcategorySlug: null,
+    }
+  }
   return parseHash(window.location.hash)
 }
 
@@ -95,44 +156,53 @@ export function NavigationProvider({ children }) {
   // Single state object keeps view + productId in lock-step and lets us
   // initialise both from the URL hash with one lazy call.
   const [route, setRoute] = useState(readInitial)
-  const { view, productId } = route
+  const { view, productId, categoryId, subcategorySlug } = route
   // Guards the hashchange listener so internally-triggered hash writes
   // don't accidentally cause a redundant state update.
   const internalWrite = useRef(false)
 
   // ---- hash write helpers ------------------------------------------
-  const writeHash = useCallback((nextView, nextProductId, replace = false) => {
-    if (typeof window === 'undefined') return
-    const target = buildHash(nextView, nextProductId)
-    const current = window.location.hash || ''
-    if (current === target) return
-    const url =
-      window.location.pathname + window.location.search + target
-    internalWrite.current = true
-    try {
-      if (replace) window.history.replaceState(null, '', url)
-      else window.history.pushState(null, '', url)
-    } catch {
-      // Some browsers (e.g. file://) reject pushState — fall back to a
-      // direct hash assignment which still fires hashchange.
-      window.location.hash = target
-    }
-    // The microtask below resets the flag *after* any synchronous
-    // hashchange would have fired, so external changes are still seen.
-    Promise.resolve().then(() => {
-      internalWrite.current = false
-    })
-  }, [])
+  const writeHash = useCallback(
+    (nextView, nextProductId, nextCategoryId, nextSubSlug, replace = false) => {
+      if (typeof window === 'undefined') return
+      const target = buildHash(
+        nextView,
+        nextProductId,
+        nextCategoryId,
+        nextSubSlug
+      )
+      const current = window.location.hash || ''
+      if (current === target) return
+      const url =
+        window.location.pathname + window.location.search + target
+      internalWrite.current = true
+      try {
+        if (replace) window.history.replaceState(null, '', url)
+        else window.history.pushState(null, '', url)
+      } catch {
+        window.location.hash = target
+      }
+      Promise.resolve().then(() => {
+        internalWrite.current = false
+      })
+    },
+    []
+  )
 
-  /**
-   * Single internal helper every public navigation action goes through.
-   * Always updates React state, writes the hash, and scrolls the page
-   * back to the top for a fresh-page feel.
-   */
   const navigate = useCallback(
-    (nextView, nextProductId = null) => {
-      setRoute({ view: nextView, productId: nextProductId })
-      writeHash(nextView, nextProductId)
+    (
+      nextView,
+      nextProductId = null,
+      nextCategoryId = null,
+      nextSubcategorySlug = null
+    ) => {
+      setRoute({
+        view: nextView,
+        productId: nextProductId,
+        categoryId: nextCategoryId,
+        subcategorySlug: nextSubcategorySlug,
+      })
+      writeHash(nextView, nextProductId, nextCategoryId, nextSubcategorySlug)
       scrollTop()
     },
     [writeHash]
@@ -142,7 +212,7 @@ export function NavigationProvider({ children }) {
   // On first mount: normalize the URL so e.g. visiting `#garbage`
   // rewrites it to `#home` (or strips it entirely for home).
   useEffect(() => {
-    writeHash(route.view, route.productId, true)
+    writeHash(route.view, route.productId, route.categoryId, route.subcategorySlug, true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -161,12 +231,20 @@ export function NavigationProvider({ children }) {
   // ---- public actions -----------------------------------------------
   const openProduct = useCallback(
     (id) => {
-      navigate('details', id)
+      navigate('details', id, null, null)
     },
     [navigate]
   )
 
   const goHome = useCallback(() => navigate('home'), [navigate])
+  const goCategory = useCallback(
+    (id) => navigate('category', null, id, null),
+    [navigate]
+  )
+  const goSubcategory = useCallback(
+    (id, subSlug) => navigate('category', null, id, subSlug),
+    [navigate]
+  )
   const goLogin = useCallback(() => navigate('login'), [navigate])
   const goSignup = useCallback(() => navigate('signup'), [navigate])
   const goWishlist = useCallback(() => navigate('wishlist'), [navigate])
@@ -174,6 +252,10 @@ export function NavigationProvider({ children }) {
   const goMyAds = useCallback(() => navigate('my-ads'), [navigate])
   const goAccount = useCallback(() => navigate('account'), [navigate])
   const goSell = useCallback(() => navigate('sell'), [navigate])
+  const goEditAd = useCallback(
+    (id) => navigate('edit-ad', id, null, null),
+    [navigate]
+  )
   const goAdminLogin = useCallback(() => navigate('admin-login'), [navigate])
   const goAdminDashboard = useCallback(
     () => navigate('admin-dashboard'),
@@ -201,8 +283,12 @@ export function NavigationProvider({ children }) {
     () => ({
       view,
       productId,
+      categoryId,
+      subcategorySlug,
       openProduct,
       goHome,
+      goCategory,
+      goSubcategory,
       goLogin,
       goSignup,
       goWishlist,
@@ -210,6 +296,7 @@ export function NavigationProvider({ children }) {
       goMyAds,
       goAccount,
       goSell,
+      goEditAd,
       goAdminLogin,
       goAdminDashboard,
       goAdminProducts,
@@ -221,8 +308,12 @@ export function NavigationProvider({ children }) {
     [
       view,
       productId,
+      categoryId,
+      subcategorySlug,
       openProduct,
       goHome,
+      goCategory,
+      goSubcategory,
       goLogin,
       goSignup,
       goWishlist,
@@ -230,6 +321,7 @@ export function NavigationProvider({ children }) {
       goMyAds,
       goAccount,
       goSell,
+      goEditAd,
       goAdminLogin,
       goAdminDashboard,
       goAdminProducts,

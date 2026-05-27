@@ -1,13 +1,9 @@
 import ProductCard from './ProductCard'
 import CategoryIcon from './CategoryIcon'
-import { useSearch } from '../context/SearchContext'
-
-// Each home-page section shows a category title + tagline + a row of
-// up to 4 representative products and a "See all" link. The grid wraps
-// automatically on smaller widths thanks to the CSS in desktop.css.
+import { useNavigation } from '../context/NavigationContext'
 
 export default function CategorySection({ category, products }) {
-  const { submit } = useSearch()
+  const { goCategory } = useNavigation()
   if (!products || products.length === 0) return null
   const previewProducts = products.slice(0, 4)
 
@@ -38,7 +34,7 @@ export default function CategorySection({ category, products }) {
         <button
           type="button"
           className="cat-section-seeall"
-          onClick={() => submit(category.name)}
+          onClick={() => goCategory(category.id)}
         >
           See all
         </button>

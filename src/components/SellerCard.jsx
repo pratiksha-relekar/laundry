@@ -1,20 +1,20 @@
-import { useState } from 'react'
-import { ChatIcon, PhoneIcon, UserIcon } from './Icons'
 import { useChats } from '../context/ChatsContext'
 import { useNavigation } from '../context/NavigationContext'
 import { useAuth } from '../context/AuthContext'
+import { ChatIcon, PhoneIcon, UserIcon } from './Icons'
+import { digitsForTel, getPhoneDisplay, getProductPhone } from '../utils/phone'
 
-// Card on the right rail of the product details page that displays the
-// seller's profile and exposes "Chat with seller" + "Call seller".
-//
-// The Call action reveals the masked phone number on first tap (the
-// classic OLX flow) and turns into a "tap to call" link.
-
-export default function SellerCard({ seller, productId }) {
-  const [phoneShown, setPhoneShown] = useState(false)
+/**
+ * Seller block on the product page — chat and call (opens device dialer).
+ */
+export default function SellerCard({ seller, productId, product }) {
   const { startChat } = useChats()
   const { goChats, goLogin } = useNavigation()
   const { user } = useAuth()
+
+  const realPhone = getProductPhone(product, seller)
+  const telHref = digitsForTel(realPhone)
+  const displayPhone = getPhoneDisplay(product, seller)
 
   const handleChat = async () => {
     if (!user) {
@@ -25,6 +25,11 @@ export default function SellerCard({ seller, productId }) {
     if (chatId) goChats()
   }
 
+  const handleCall = () => {
+    if (!telHref) return
+    window.location.href = telHref
+  }
+
   return (
     <section className="seller-card">
       <div className="seller-row">
@@ -33,14 +38,16 @@ export default function SellerCard({ seller, productId }) {
         </div>
         <div className="seller-info">
           <span className="seller-tag">Posted By</span>
-          <span className="seller-name">{seller.name}</span>
-          <span className="seller-since">Member since {seller.memberSince}</span>
+          <span className="seller-name">{seller?.name || 'Seller'}</span>
+          <span className="seller-since">
+            Member since {seller?.memberSince || '—'}
+          </span>
         </div>
       </div>
 
       <div className="seller-stats">
         <div className="seller-stat">
-          <span className="seller-stat-num">{seller.itemsListed}</span>
+          <span className="seller-stat-num">{seller?.itemsListed ?? '—'}</span>
           <span className="seller-stat-label">Items listed</span>
         </div>
       </div>
@@ -53,20 +60,29 @@ export default function SellerCard({ seller, productId }) {
         <ChatIcon size={18} /> Chat with seller
       </button>
 
-      <button
-        type="button"
-        className={`seller-btn seller-btn-call ${phoneShown ? 'is-revealed' : ''}`}
-        onClick={() => setPhoneShown(true)}
-      >
-        <PhoneIcon size={18} />
-        {phoneShown ? (
-          <a href={`tel:${seller.phoneMasked.replace(/\s/g, '')}`}>
-            {seller.phoneMasked}
-          </a>
-        ) : (
-          <span>Show phone number</span>
-        )}
-      </button>
+      {telHref ? (
+        <a
+          href={telHref}
+          className="seller-btn seller-btn-call seller-btn-call-link"
+          onClick={(e) => {
+            e.preventDefault()
+            handleCall()
+          }}
+        >
+          <PhoneIcon size={18} />
+          <span>Call {displayPhone}</span>
+        </a>
+      ) : (
+        <button
+          type="button"
+          className="seller-btn seller-btn-call is-disabled"
+          disabled
+          title="Seller has not added a phone number"
+        >
+          <PhoneIcon size={18} />
+          <span>Phone not available</span>
+        </button>
+      )}
     </section>
   )
 }

@@ -31,7 +31,8 @@ import {
 //   totalUnread: number of chats with unread messages
 //   startChat(productId): create-or-get the chat for a product
 //   sendMessage(chatId, text)
-//   removeChat(chatId): soft-delete from this user's inbox
+//   removeChat(chatId): soft-delete from this user's inbox only
+//                       (other party keeps full history)
 // =====================================================================
 
 const ChatsContext = createContext(null)
@@ -176,15 +177,22 @@ export function ChatsProvider({ children }) {
 
   const removeChat = useCallback(
     async (chatId) => {
-      if (!myEmail || !chatId) return
+      if (!myEmail || !chatId) {
+        return { ok: false, error: 'You must be logged in to delete a chat.' }
+      }
       if (activeId === chatId) {
         setActiveId(null)
         setRawMessages([])
       }
       try {
         await hideChatForUser(chatId, myEmail)
+        return { ok: true }
       } catch (err) {
         console.warn('[chats] hide failed:', err?.message)
+        return {
+          ok: false,
+          error: err?.message || 'Could not delete this chat. Try again.',
+        }
       }
     },
     [myEmail, activeId]

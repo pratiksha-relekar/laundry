@@ -1,4 +1,5 @@
 import { HeartIcon, VerifiedIcon, CameraIcon } from './Icons'
+import { useAuth } from '../context/AuthContext'
 import { useNavigation } from '../context/NavigationContext'
 import { useWishlist } from '../context/WishlistContext'
 
@@ -7,7 +8,8 @@ function formatPrice(n) {
 }
 
 export default function ProductCard({ product }) {
-  const { openProduct } = useNavigation()
+  const { openProduct, goLogin } = useNavigation()
+  const { user } = useAuth()
   const { isInWishlist, toggle } = useWishlist()
   const liked = isInWishlist(product.id)
   const photoCount = product.images?.length ?? 6
@@ -42,6 +44,10 @@ export default function ProductCard({ product }) {
           aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
           onClick={(e) => {
             e.stopPropagation()
+            if (!user) {
+              goLogin()
+              return
+            }
             toggle(product.id)
           }}
         >

@@ -20,11 +20,23 @@ export default function SignupPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
+  const [consentModal, setConsentModal] = useState(null) // 'terms' | 'privacy' | null
+  const [agreedTerms, setAgreedTerms] = useState(false)
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
     setErrors({})
+
+    if (!agreedTerms || !agreedPrivacy) {
+      setErrors({
+        form: 'Please accept Terms and Privacy Policy to continue.',
+      })
+      setSubmitting(false)
+      return
+    }
+
     const result = await signup({ fullName, email, password, confirmPassword })
     if (!result.ok) {
       setErrors({ [result.field || 'form']: result.error })
@@ -146,9 +158,31 @@ export default function SignupPage() {
         </form>
 
         <p className="auth-terms">
-          By signing up you agree to our <a href="#" onClick={(e) => e.preventDefault()}>Terms</a>{' '}
-          and <a href="#" onClick={(e) => e.preventDefault()}>Privacy Policy</a>.
+          By signing up you agree to our{' '}
+          <button
+            type="button"
+            className="auth-link-btn"
+            onClick={() => setConsentModal('terms')}
+          >
+            Terms
+          </button>{' '}
+          and{' '}
+          <button
+            type="button"
+            className="auth-link-btn"
+            onClick={() => setConsentModal('privacy')}
+          >
+            Privacy Policy
+          </button>
+          .
         </p>
+
+        {(agreedTerms || agreedPrivacy) && (
+          <p className="auth-consent-status">
+            {agreedTerms ? '✓ Terms' : 'Terms not accepted'} ·{' '}
+            {agreedPrivacy ? '✓ Privacy' : 'Privacy not accepted'}
+          </p>
+        )}
 
         <div className="auth-divider">
           <span>OR</span>
@@ -171,6 +205,72 @@ export default function SignupPage() {
           </a>
         </p>
       </div>
+
+      {consentModal && (
+        <div
+          className="auth-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Terms and privacy"
+          onClick={() => setConsentModal(null)}
+        >
+          <div
+            className="auth-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="auth-modal-head">
+              <h2 className="auth-modal-title">
+                {consentModal === 'terms' ? 'Terms' : 'Privacy Policy'}
+              </h2>
+              <button
+                type="button"
+                className="auth-modal-close"
+                aria-label="Close"
+                onClick={() => setConsentModal(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="auth-modal-body">
+              <p className="auth-modal-text">
+                {consentModal === 'terms'
+                  ? 'This is a demo Terms of Service screen. In production, link to your real Terms page.'
+                  : 'This is a demo Privacy Policy screen. In production, link to your real Privacy page.'}
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <label className="auth-modal-check">
+                  <input
+                    type="checkbox"
+                    checked={agreedTerms}
+                    onChange={(e) => setAgreedTerms(e.target.checked)}
+                  />
+                  <span>I agree to the Terms</span>
+                </label>
+                <label className="auth-modal-check">
+                  <input
+                    type="checkbox"
+                    checked={agreedPrivacy}
+                    onChange={(e) => setAgreedPrivacy(e.target.checked)}
+                  />
+                  <span>I agree to the Privacy Policy</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="auth-modal-actions">
+              <button
+                type="button"
+                className="auth-submit"
+                onClick={() => setConsentModal(null)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
