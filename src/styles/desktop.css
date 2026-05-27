@@ -48,10 +48,42 @@
   flex-shrink: 0;
 }
 
-.logo-mark {
+/* NexDeal SVG mark — theme-aware, transparent background */
+.brand-mark-group {
+  transform: translate(2px, 1px);
+}
+
+.brand-mark-n {
+  fill: var(--logo-n);
+}
+.brand-mark-d,
+.brand-mark-tag {
+  fill: var(--logo-d);
+}
+.brand-mark-tag-hole {
+  fill: var(--logo-tag-hole);
+}
+
+.brand-wordmark {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+}
+
+.brand-wordmark-text {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.6px;
+  color: var(--text);
+  line-height: 1;
+}
+
+.hero-brand-wordmark .brand-wordmark-text {
+  font-size: 24px;
+}
+
+.hero-brand-wordmark {
+  align-items: center;
 }
 
 .logo-text {
@@ -734,37 +766,6 @@
   gap: 6px;
 }
 
-.hero-brand-mark {
-  width: 70px;
-  height: 70px;
-  border-radius: 18px;
-  background: var(--brand);
-  color: #fff;
-  font-weight: 900;
-  font-size: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-style: italic;
-  box-shadow: 0 10px 24px rgba(27, 111, 255, 0.25);
-}
-
-.hero-brand-text {
-  font-size: 28px;
-  font-weight: 900;
-  color: var(--text);
-  letter-spacing: -0.8px;
-}
-
-.hero-brand-sub {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: 4px;
-  background: var(--bg);
-  padding: 3px 8px;
-  border-radius: 4px;
-}
 
 .hero-machines {
   display: grid;
@@ -1702,7 +1703,7 @@
   background: var(--footer-bg);
   color: var(--footer-link);
   margin-top: 28px;
-  border-top: 3px solid var(--brand);
+  border-top: 1px solid var(--footer-border);
 }
 
 .footer-inner {
@@ -1785,18 +1786,6 @@
   cursor: pointer;
 }
 
-.footer-logo-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--brand);
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-style: italic;
-}
 
 /* ---------------------------------------------------------------------
    Responsive: tablet
@@ -1882,8 +1871,12 @@
   .search-results-title h2 {
     font-size: 14px;
   }
+  .logo .logo-mark-slot {
+    width: 30px;
+    height: 30px;
+  }
   .logo-text {
-    font-size: 19px;
+    font-size: 17px;
   }
   .loc-pill {
     min-width: 0;
@@ -1949,14 +1942,12 @@
     margin: 12px 14px 0;
     padding: 16px;
   }
-  .hero-brand-mark {
-    width: 54px;
-    height: 54px;
-    font-size: 32px;
-    border-radius: 14px;
+  .hero-brand-wordmark .brand-wordmark-text {
+    font-size: 19px;
   }
-  .hero-brand-text {
-    font-size: 22px;
+  .hero-brand-wordmark .brand-mark {
+    width: 34px;
+    height: 34px;
   }
   .hero-cta h3 {
     font-size: 17px;
@@ -5035,9 +5026,6 @@
   background: var(--brand-dark);
 }
 
-[data-theme='dark'] .lx-footer {
-  border-top-color: var(--brand);
-}
 
 /* Search box: in dark mode the brand-blue border looks cleaner than the
    light-mode dark teal border. */

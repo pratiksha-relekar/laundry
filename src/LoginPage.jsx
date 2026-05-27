@@ -54,7 +54,7 @@ export default function LoginPage() {
       <div className="auth-card">
         <div className="auth-header">
           <h1>Welcome back</h1>
-          <p>Login to your Laundry account to buy and sell appliances.</p>
+          <p>Login to your NexDeal account to buy and sell appliances.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>

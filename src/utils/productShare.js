@@ -11,7 +11,7 @@ function buildShareText({ title, price }) {
     typeof price === 'number' && !Number.isNaN(price)
       ? ` — ₹ ${price.toLocaleString('en-IN')}`
       : ''
-  return `${title || 'Listing'}${priceLine} on Laundry`
+  return `${title || 'Listing'}${priceLine} on NexDeal`
 }
 
 async function copyText(text) {
@@ -37,7 +37,7 @@ async function copyText(text) {
  */
 export async function shareProduct(product) {
   const url = getProductShareUrl(product.id)
-  const title = product.title || 'Laundry listing'
+  const title = product.title || 'NexDeal listing'
   const text = buildShareText(product)
 
   if (typeof navigator !== 'undefined' && navigator.share) {

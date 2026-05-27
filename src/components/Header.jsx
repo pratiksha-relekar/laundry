@@ -12,6 +12,8 @@ import {
   SunIcon,
   UserIcon,
 } from './Icons'
+import { BRAND_NAME } from '../assets/brand'
+import { BrandMark } from './BrandLogo'
 import { useSearch } from '../context/SearchContext'
 import { useAuth } from '../context/AuthContext'
 import { useNavigation } from '../context/NavigationContext'
@@ -24,21 +26,14 @@ function Logo({ onClick }) {
     <a
       className="logo"
       href="#"
-      aria-label="Laundry — homepage"
+      aria-label={`${BRAND_NAME} — homepage`}
       onClick={(e) => {
         e.preventDefault()
         onClick?.()
       }}
     >
-      <span className="logo-mark">
-        <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden>
-          <circle cx="20" cy="20" r="20" fill="#1B6FFF" />
-          <circle cx="20" cy="20" r="11" fill="#fff" />
-          <circle cx="20" cy="20" r="6" fill="#1B6FFF" opacity="0.85" />
-          <circle cx="14" cy="14" r="2" fill="#fff" opacity="0.6" />
-        </svg>
-      </span>
-      <span className="logo-text">Laundry</span>
+      <BrandMark size={36} className="logo-mark-slot" />
+      <span className="logo-text">{BRAND_NAME}</span>
     </a>
   )
 }
@@ -48,15 +43,13 @@ function UserMenu({ user, onLogout, onAccount, onMyAds, onWishlist, onSell }) {
   const ref = useRef(null)
 
   useEffect(() => {
-    function handleClick(e) {
+    if (!open) return undefined
+    function onDoc(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false)
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  const firstName = (user.fullName || 'User').split(' ')[0]
-  const initial = (user.fullName || user.email || 'U').trim().charAt(0).toUpperCase()
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
 
   const handle = (fn) => () => {
     setOpen(false)
@@ -72,30 +65,33 @@ function UserMenu({ user, onLogout, onAccount, onMyAds, onWishlist, onSell }) {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="hdr-user-avatar" aria-hidden>{initial}</span>
-        <span className="hdr-user-name">Hi, {firstName}</span>
+        <span className="hdr-user-avatar" aria-hidden>
+          {(user?.fullName || user?.email || 'U').trim().charAt(0).toUpperCase()}
+        </span>
+        <span className="hdr-user-name">{user?.fullName?.split(' ')[0] || 'Account'}</span>
         <ChevronDown size={14} />
       </button>
+
       {open && (
         <div className="hdr-user-menu" role="menu">
           <div className="hdr-user-meta">
-            <strong>{user.fullName}</strong>
-            <span>{user.email}</span>
-            {user.provider === 'google' && (
-              <span className="hdr-user-provider">via Google</span>
+            <strong>{user?.fullName}</strong>
+            <span>{user?.email}</span>
+            {user?.provider === 'google' && (
+              <span className="hdr-user-provider">Signed in with Google</span>
             )}
           </div>
-          <button type="button" className="hdr-user-item" onClick={handle(onAccount)}>
-            <UserIcon size={16} /> My account
+          <button type="button" className="hdr-user-item" onClick={handle(onSell)}>
+            <PlusIcon size={16} /> Sell
           </button>
           <button type="button" className="hdr-user-item" onClick={handle(onMyAds)}>
-            <SettingsIcon size={16} /> My ads
+            <PlusIcon size={16} /> My ADS
           </button>
           <button type="button" className="hdr-user-item" onClick={handle(onWishlist)}>
             <HeartIcon size={16} /> Wishlist
           </button>
-          <button type="button" className="hdr-user-item" onClick={handle(onSell)}>
-            <PlusIcon size={16} /> Sell an item
+          <button type="button" className="hdr-user-item" onClick={handle(onAccount)}>
+            <SettingsIcon size={16} /> Account
           </button>
           <div className="hdr-user-divider" aria-hidden />
           <button type="button" className="hdr-user-item" onClick={handle(onLogout)}>
@@ -107,68 +103,47 @@ function UserMenu({ user, onLogout, onAccount, onMyAds, onWishlist, onSell }) {
   )
 }
 
-function ThemeToggle() {
-  const { isDark, toggleTheme } = useTheme()
-  return (
-    <button
-      type="button"
-      className="hdr-theme"
-      onClick={toggleTheme}
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-    >
-      <span className="hdr-theme-icon" aria-hidden>
-        {isDark ? <SunIcon size={20} /> : <MoonIcon size={20} />}
-      </span>
-    </button>
-  )
-}
-
 export default function Header() {
-  const { query, setQuery, submit, clearSearch } = useSearch()
-  const { user, logout } = useAuth()
+  const {
+    query,
+    setQuery,
+    submit,
+    clearSearch,
+    dropdownOpen,
+    setDropdownOpen,
+    recent,
+    removeRecent,
+    clearRecent,
+    suggestions,
+    isFiltering,
+  } = useSearch()
+  const { user, logout, isSeller } = useAuth()
   const {
     goHome,
     goLogin,
-    goWishlist,
-    goAccount,
-    goMyAds,
     goSell,
+    goWishlist,
+    goMyAds,
+    goAccount,
   } = useNavigation()
   const { count: wishlistCount } = useWishlist()
-  const [open, setOpen] = useState(false)
-  const wrapperRef = useRef(null)
-  const inputRef = useRef(null)
+  const { theme, toggleTheme } = useTheme()
+  const searchRef = useRef(null)
 
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setOpen(false)
+    function onDoc(e) {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setDropdownOpen(false)
       }
     }
-    function handleKey(e) {
-      if (e.key === 'Escape') {
-        setOpen(false)
-        inputRef.current?.blur()
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [])
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [setDropdownOpen])
 
-  const handleSubmit = (value) => {
-    submit(value)
-    setOpen(false)
-    inputRef.current?.blur()
-  }
-
-  const handlePick = (value) => {
-    setQuery(value)
-    handleSubmit(value)
+  const handleSearchSubmit = (e) => {
+    e.preventDefault()
+    submit(query)
+    setDropdownOpen(false)
   }
 
   return (
@@ -176,60 +151,81 @@ export default function Header() {
       <div className="lx-header-inner">
         <Logo onClick={goHome} />
 
-        <button className="loc-pill" type="button">
+        <button type="button" className="loc-pill" aria-label="Change location">
           <PinIcon size={18} />
           <span className="loc-pill-text">India</span>
           <ChevronDown size={16} />
         </button>
 
-        <div className="search-wrap" ref={wrapperRef}>
-          <div className={`search ${open ? 'is-open' : ''}`}>
-            <SearchIcon size={18} className="search-leading" />
+        <div className="search-wrap" ref={searchRef}>
+          <form className="search" onSubmit={handleSearchSubmit}>
+            <SearchIcon size={18} />
             <input
-              ref={inputRef}
-              type="text"
+              type="search"
+              placeholder="Find washing machines, dryers, and more…"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setOpen(true)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSubmit()
+              onChange={(e) => {
+                setQuery(e.target.value)
+                if (!dropdownOpen) setDropdownOpen(true)
               }}
-              placeholder="Search washing machines, dryers, steam irons..."
-              aria-label="Search Laundry"
-              autoComplete="off"
+              onFocus={() => setDropdownOpen(true)}
+              aria-label={`Search ${BRAND_NAME}`}
+              aria-expanded={dropdownOpen}
+              aria-controls="search-dropdown"
             />
             {query && (
               <button
                 type="button"
                 className="search-clear"
                 aria-label="Clear search"
-                onMouseDown={(e) => {
-                  e.preventDefault()
+                onClick={() => {
                   clearSearch()
-                  inputRef.current?.focus()
+                  setDropdownOpen(false)
                 }}
               >
-                <CloseIcon size={14} />
+                <CloseIcon size={16} />
               </button>
             )}
-            <button
-              className="search-btn"
-              type="button"
-              onClick={() => handleSubmit()}
-              aria-label="Search"
-            >
-              <SearchIcon size={18} />
-            </button>
-          </div>
+          </form>
 
-          {open && <SearchDropdown onPick={handlePick} />}
+          {dropdownOpen && (
+            <SearchDropdown
+              id="search-dropdown"
+              query={query}
+              recent={recent}
+              suggestions={suggestions}
+              isFiltering={isFiltering}
+              onPick={(q) => {
+                submit(q)
+                setDropdownOpen(false)
+              }}
+              onRemoveRecent={removeRecent}
+              onClearRecent={clearRecent}
+            />
+          )}
         </div>
 
         <div className="header-actions">
-          <ThemeToggle />
           <button
-            className="hdr-icon hdr-icon-wishlist"
             type="button"
+            className="hdr-theme"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <SunIcon size={20} /> : <MoonIcon size={20} />}
+          </button>
+
+          {isSeller && (
+            <button type="button" className="sell-pill" onClick={goSell}>
+              <span className="sell-pill-inner">
+                <PlusIcon size={16} /> SELL
+              </span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="hdr-icon hdr-icon-wishlist"
             aria-label={`Wishlist${wishlistCount ? ` (${wishlistCount})` : ''}`}
             onClick={goWishlist}
           >
@@ -243,6 +239,7 @@ export default function Header() {
             </span>
             <span className="hdr-icon-label">Wishlist</span>
           </button>
+
           {user ? (
             <UserMenu
               user={user}
@@ -253,26 +250,11 @@ export default function Header() {
               onSell={goSell}
             />
           ) : (
-            <button
-              className="hdr-icon"
-              type="button"
-              aria-label="Login"
-              onClick={goLogin}
-            >
-              <UserIcon size={22} />
-              <span className="hdr-icon-label">Login</span>
+            <button type="button" className="hdr-login" onClick={goLogin}>
+              <UserIcon size={18} />
+              Login
             </button>
           )}
-          <button
-            className="sell-pill"
-            type="button"
-            onClick={user ? goSell : goLogin}
-          >
-            <span className="sell-pill-inner">
-              <PlusIcon size={16} />
-              SELL
-            </span>
-          </button>
         </div>
       </div>
     </header>

@@ -29,7 +29,7 @@ function BecomeSellerPrompt({ user, onUpgrade, onBack, upgrading, error }) {
         <p>
           Your account <strong>{user?.email}</strong> is currently a
           <em> user</em>. Upgrade to a <strong>seller</strong> account to
-          list products on the Laundry marketplace. You can continue to
+          list products on the NexDeal marketplace. You can continue to
           buy and chat just like before.
         </p>
         <ul className="seller-onboarding-list">
@@ -74,7 +74,7 @@ function SellLoginPrompt({ onLogin, onBack }) {
         <button type="button" className="details-back" onClick={onBack}>
           <ArrowLeftIcon size={16} /> Back to home
         </button>
-        <h1 className="lx-page-h1">Sell on Laundry</h1>
+        <h1 className="lx-page-h1">Sell on NexDeal</h1>
       </div>
 
       <div className="seller-onboarding">
@@ -83,7 +83,7 @@ function SellLoginPrompt({ onLogin, onBack }) {
         </div>
         <h2>Become a seller in 60 seconds</h2>
         <p>
-          Login or create your free Laundry account to post listings, chat with
+          Login or create your free NexDeal account to post listings, chat with
           buyers and manage your ads from one place.
         </p>
         <ul className="seller-onboarding-list">
@@ -159,7 +159,7 @@ export default function SellPage() {
             <CheckIcon size={36} />
           </div>
           <h2>Your ad is live!</h2>
-          <p>Buyers can now find it on Laundry. Taking you to My ADS…</p>
+          <p>Buyers can now find it on NexDeal. Taking you to My ADS…</p>
         </div>
       </div>
     )

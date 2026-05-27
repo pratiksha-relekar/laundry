@@ -108,7 +108,7 @@ export default function AdminDashboardPage() {
   return (
     <AdminLayout
       title="Dashboard"
-      subtitle="High-level health of the Laundry marketplace."
+      subtitle="High-level health of the NexDeal marketplace."
     >
       <section className="admin-stats">
         <StatCard

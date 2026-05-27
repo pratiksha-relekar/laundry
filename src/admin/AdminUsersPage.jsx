@@ -223,7 +223,7 @@ export default function AdminUsersPage() {
   return (
     <AdminLayout
       title="Users"
-      subtitle="Every account registered on the Laundry marketplace."
+      subtitle="Every account registered on the NexDeal marketplace."
     >
       <section className="admin-stats">
         <StatCard

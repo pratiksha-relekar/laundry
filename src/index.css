@@ -56,13 +56,18 @@
   --warning-bg: #fef7e0;
   --warning-text: #b54708;
 
-  /* Footer (OLX-style deep teal — matches brand text color) */
-  --footer-bg: #002f34;
-  --footer-heading: #ffffff;
-  --footer-link: #c4c9cc;
-  --footer-link-hover: #ffffff;
-  --footer-border: #1a4045;
-  --footer-muted: #8b9599;
+  /* Logo (SVG — no white PNG box) */
+  --logo-n: #0c1e3a;
+  --logo-d: #1b6fff;
+  --logo-tag-hole: #ffffff;
+
+  /* Footer — white surface in light mode */
+  --footer-bg: #ffffff;
+  --footer-heading: var(--text);
+  --footer-link: var(--muted-strong);
+  --footer-link-hover: var(--brand);
+  --footer-border: var(--border);
+  --footer-muted: var(--muted);
 
   /* Misc */
   --shadow-sm: rgba(15, 23, 42, 0.06);
@@ -123,12 +128,16 @@
   --warning-bg: #2e2410;
   --warning-text: #f7c87a;
 
-  --footer-bg: #0a0c12;
-  --footer-heading: #f3f4f6;
-  --footer-link: #a4adba;
-  --footer-link-hover: #ffffff;
-  --footer-border: #2c313b;
-  --footer-muted: #8b94a3;
+  --logo-n: #f0f3f8;
+  --logo-d: #4d8eff;
+  --logo-tag-hole: var(--header-bg);
+
+  --footer-bg: var(--bg);
+  --footer-heading: var(--text);
+  --footer-link: var(--muted-strong);
+  --footer-link-hover: var(--brand);
+  --footer-border: var(--border);
+  --footer-muted: var(--muted);
 
   /* Misc */
   --shadow-sm: rgba(0, 0, 0, 0.3);

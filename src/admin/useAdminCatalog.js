@@ -36,7 +36,7 @@ export function useAdminCatalog() {
         addedBy: user?.id || 'admin',
         seller: data.seller || {
           id: 'admin',
-          name: user?.fullName || 'Laundry team',
+          name: user?.fullName || 'NexDeal team',
           verified: true,
         },
       }

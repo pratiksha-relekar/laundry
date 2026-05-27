@@ -1,6 +1,7 @@
 import { PlusIcon } from './Icons'
 import { heroImages } from '../data/products'
 import { useNavigation } from '../context/NavigationContext'
+import { BrandWordmark } from './BrandLogo'
 
 export default function HeroBanner() {
   const { goSell } = useNavigation()
@@ -8,9 +9,7 @@ export default function HeroBanner() {
     <div className="hero-banner">
       <div className="hero-strip">
         <div className="hero-brand">
-          <span className="hero-brand-mark">L</span>
-          <span className="hero-brand-text">Laundry</span>
-          <span className="hero-brand-sub">RESELL</span>
+          <BrandWordmark markSize={40} className="hero-brand-wordmark" />
         </div>
 
         <div className="hero-machines" aria-hidden>

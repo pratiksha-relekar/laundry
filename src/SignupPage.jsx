@@ -68,7 +68,7 @@ export default function SignupPage() {
       <div className="auth-card">
         <div className="auth-header">
           <h1>Create your account</h1>
-          <p>Join Laundry to buy and sell pre-owned washing & cleaning equipment.</p>
+          <p>Join NexDeal to buy and sell pre-owned washing & cleaning equipment.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>

@@ -1,5 +1,7 @@
 import { categories } from '../data/categories'
 import { useNavigation } from '../context/NavigationContext'
+import { BRAND_NAME } from '../assets/brand'
+import { BrandMark } from './BrandLogo'
 
 const LAUNDRY_BRANDS = [
   'LG',
@@ -12,7 +14,6 @@ const LAUNDRY_BRANDS = [
   'Haier',
 ]
 
-/** Shorter labels for footer links */
 function footerCategoryLabel(name) {
   return name
     .replace(/ & Cleaning Machines$/, '')
@@ -74,7 +75,7 @@ export default function Footer() {
             ))}
           </FooterColumn>
 
-          <FooterColumn title="Sell on Laundry">
+          <FooterColumn title={`Sell on ${BRAND_NAME}`}>
             <FooterLink onClick={goSell}>Post your machine for free</FooterLink>
             <FooterLink onClick={goMyAds}>My ADS</FooterLink>
             <FooterLink onClick={goAccount}>My account</FooterLink>
@@ -92,12 +93,12 @@ export default function Footer() {
 
         <div className="footer-bottom">
           <button type="button" className="footer-logo" onClick={goHome}>
-            <span className="footer-logo-mark">L</span>
-            <span>Laundry</span>
+            <BrandMark size={28} />
+            <span>{BRAND_NAME}</span>
           </button>
           <p>
             Buy &amp; sell pre-owned laundry equipment in India · ©{' '}
-            {new Date().getFullYear()} Laundry Resell
+            {new Date().getFullYear()} {BRAND_NAME}
           </p>
         </div>
       </div>

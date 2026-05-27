@@ -80,7 +80,7 @@ function ProfileSection() {
         <div>
           <h2>Profile details</h2>
           <p className="account-section-sub">
-            Manage how other Laundry users see you.
+            Manage how other NexDeal users see you.
           </p>
         </div>
         {!editing && (
@@ -251,7 +251,7 @@ function SettingsSection() {
         <div>
           <h2>Account settings</h2>
           <p className="account-section-sub">
-            Control how Laundry contacts you and what other users can see.
+            Control how NexDeal contacts you and what other users can see.
           </p>
         </div>
       </div>
@@ -310,7 +310,7 @@ function HelpSection() {
   const faqs = [
     {
       id: 'sell',
-      q: 'How do I post an ad on Laundry?',
+      q: 'How do I post an ad on NexDeal?',
       a: 'Tap "Sell" in the header or bottom bar, fill in the details, add photos and submit. Your listing appears under My ADS immediately.',
     },
     {
@@ -336,7 +336,7 @@ function HelpSection() {
         <div>
           <h2>Help &amp; support</h2>
           <p className="account-section-sub">
-            Common questions about buying and selling on Laundry.
+            Common questions about buying and selling on NexDeal.
           </p>
         </div>
       </div>

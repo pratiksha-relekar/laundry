@@ -134,7 +134,7 @@ export default function DesktopView() {
             <h1 className="lx-page-title">
               {isFiltering
                 ? `Showing products ${filteringLabel}`.trim()
-                : 'Buy \u0026 Sell Laundry Equipment in India'}
+                : 'Buy \u0026 Sell Laundry Equipment on NexDeal'}
             </h1>
           </div>
 
