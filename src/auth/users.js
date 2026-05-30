@@ -423,8 +423,8 @@ export async function bumpAdsCount(id, delta = 1) {
 }
 
 /**
- * When a seller has zero live listings, demote primary role to buyer (`user`).
- * Admins are never demoted. Returns true if the profile was updated.
+ * When a seller deletes their last listing, demote primary role to buyer (`user`).
+ * Does not run for sellers who simply have not posted yet. Admins are never demoted.
  *
  * @param {string} sellerId — user doc id (email key)
  * @param {number} listingCount — live count from `countSellerProducts`

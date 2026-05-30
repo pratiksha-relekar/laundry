@@ -201,8 +201,8 @@ export function AuthProvider({ children }) {
       if (!name)
         return {
           ok: false,
-          field: 'fullName',
-          error: 'Please enter your full name.',
+          field: 'firstName',
+          error: 'Please enter your first name.',
         }
       if (!mail) return { ok: false, field: 'email', error: 'Email is required.' }
       if (!isValidEmail(mail))
@@ -383,11 +383,14 @@ export function AuthProvider({ children }) {
           ? { ...prev, role: ROLES.SELLER, roles: ['user', 'seller'] }
           : prev
       )
+      if (auth.currentUser) {
+        await hydrateUser(auth.currentUser).catch(() => {})
+      }
       return { ok: true }
     } catch (err) {
       return { ok: false, error: err?.message || 'Could not update role.' }
     }
-  }, [user])
+  }, [user, hydrateUser])
 
   /** Re-read Firestore profile after role changes (e.g. seller → buyer). */
   const refreshUserProfile = useCallback(async () => {

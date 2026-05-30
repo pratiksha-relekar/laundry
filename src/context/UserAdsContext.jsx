@@ -2,9 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useRef,
 } from 'react'
 import { countSellerProducts } from '../auth/products'
 import { demoteToBuyerIfNoListings, userIsAdmin, userIsSeller } from '../auth/users'
@@ -19,7 +17,9 @@ import { useProducts } from './ProductsContext'
 // products collection so every visitor sees the new ad immediately.
 //
 // When a seller deletes their last listing, role is demoted to buyer
-// (`user`) automatically — see demoteToBuyerIfNoListings.
+// (`user`) automatically in `removeAd` / `removeProduct` — see
+// demoteToBuyerIfNoListings. New sellers with zero listings are kept
+// as sellers so they can post their first ad.
 // =====================================================================
 
 const UserAdsContext = createContext(null)
@@ -53,22 +53,6 @@ export function UserAdsProvider({ children }) {
       refreshUserProfile().catch(() => {})
     }
   }, [uid, user, applyBuyerRoleLocally, refreshUserProfile])
-
-  const demoteChecked = useRef(false)
-
-  useEffect(() => {
-    if (!uid || !user || userIsAdmin(user) || !userIsSeller(user)) {
-      demoteChecked.current = false
-      return
-    }
-    if (ads.length > 0) {
-      demoteChecked.current = false
-      return
-    }
-    if (demoteChecked.current) return
-    demoteChecked.current = true
-    syncSellerRoleFromListings()
-  }, [ads.length, uid, user, syncSellerRoleFromListings])
 
   const postAd = useCallback(
     async (data) => {

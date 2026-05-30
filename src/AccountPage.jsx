@@ -12,7 +12,6 @@ import {
   EditIcon,
   HeartIcon,
   HelpIcon,
-  LockIcon,
   LogoutIcon,
   MailIcon,
   PhoneIcon,
@@ -29,9 +28,6 @@ const SECTIONS = [
 ]
 
 const DEFAULT_SETTINGS = {
-  emailAlerts: true,
-  marketingEmails: false,
-  smsAlerts: true,
   showPhone: false,
 }
 
@@ -251,7 +247,7 @@ function SettingsSection() {
         <div>
           <h2>Account settings</h2>
           <p className="account-section-sub">
-            Control how NexDeal contacts you and what other users can see.
+            Control what other NexDeal users can see on your profile and listings.
           </p>
         </div>
       </div>
@@ -263,24 +259,6 @@ function SettingsSection() {
       )}
 
       <div className="account-toggles">
-        <Toggle
-          label="Email alerts"
-          hint="Get an email when someone messages you about a listing."
-          checked={draft.emailAlerts}
-          onChange={(v) => set('emailAlerts', v)}
-        />
-        <Toggle
-          label="SMS alerts"
-          hint="Receive text alerts for new chat messages."
-          checked={draft.smsAlerts}
-          onChange={(v) => set('smsAlerts', v)}
-        />
-        <Toggle
-          label="Marketing emails"
-          hint="Updates about new categories, offers and seller tips."
-          checked={draft.marketingEmails}
-          onChange={(v) => set('marketingEmails', v)}
-        />
         <Toggle
           label="Show phone number publicly"
           hint="Visible on your listings so buyers can call you directly."
@@ -385,7 +363,8 @@ export default function AccountPage() {
     goSell,
   } = useNavigation()
   const { count: wishlistCount } = useWishlist()
-  const { totalUnread } = useChats()
+  const { chats, totalUnread } = useChats()
+  const chatCount = chats.length
   const { count: adsCount } = useUserAds()
   const [section, setSection] = useState('profile')
 
@@ -394,7 +373,7 @@ export default function AccountPage() {
       <div className="lx-page account-page">
         <div className="lx-page-head">
           <button type="button" className="details-back" onClick={goHome}>
-            <ArrowLeftIcon size={16} /> Back to home
+            <ArrowLeftIcon size={16} /> Home
           </button>
           <h1 className="lx-page-h1">My account</h1>
         </div>
@@ -418,7 +397,7 @@ export default function AccountPage() {
     <div className="lx-page account-page">
       <div className="lx-page-head">
         <button type="button" className="details-back" onClick={goHome}>
-          <ArrowLeftIcon size={16} /> Back to home
+          <ArrowLeftIcon size={16} /> Home
         </button>
         <div className="lx-page-title-row">
           <div>
@@ -470,21 +449,21 @@ export default function AccountPage() {
 
             <button type="button" className="account-nav-item" onClick={goMyAds}>
               <PlusIcon size={16} /> My ADS
-              {adsCount > 0 && <span className="account-nav-badge">{adsCount}</span>}
+              <span className="account-nav-badge">{adsCount}</span>
             </button>
             <button type="button" className="account-nav-item" onClick={goWishlist}>
               <HeartIcon size={16} /> Wishlist
-              {wishlistCount > 0 && (
-                <span className="account-nav-badge">{wishlistCount}</span>
-              )}
+              <span className="account-nav-badge">{wishlistCount}</span>
             </button>
             <button type="button" className="account-nav-item" onClick={goChats}>
               <ChatIcon size={16} /> Chats
-              {totalUnread > 0 && (
-                <span className="account-nav-badge account-nav-badge-alert">
-                  {totalUnread}
-                </span>
-              )}
+              <span
+                className={`account-nav-badge${
+                  totalUnread > 0 ? ' account-nav-badge-alert' : ''
+                }`}
+              >
+                {chatCount}
+              </span>
             </button>
 
             <div className="account-nav-sep" aria-hidden />

@@ -10,6 +10,7 @@ import { useAuth } from './AuthContext'
 import { useProducts } from './ProductsContext'
 import {
   addToWishlist,
+  clearWishlist as clearWishlistInFirestore,
   removeFromWishlist,
   subscribeToUserDoc,
 } from '../auth/users'
@@ -29,6 +30,7 @@ export function WishlistProvider({ children }) {
   const { productMap } = useProducts()
   const uid = user?.id || null
   const [ids, setIds] = useState([])
+  const [clearing, setClearing] = useState(false)
   // When logged out, never show the previous account's wishlist in memory.
   const activeIds = uid ? ids : []
 
@@ -72,18 +74,38 @@ export function WishlistProvider({ children }) {
 
   const remove = useCallback(
     async (productId) => {
-      if (!uid || !productId) return
+      if (!uid || !productId) return false
+      const had = activeIds.includes(productId)
+      if (!had) return true
       setIds((prev) => prev.filter((x) => x !== productId))
       try {
         await removeFromWishlist(uid, productId)
+        return true
       } catch (err) {
         console.warn('[wishlist] remove failed:', err?.message)
+        setIds((prev) => [...prev, productId])
+        return false
       }
     },
-    [uid]
+    [uid, activeIds]
   )
 
-  const clear = useCallback(() => setIds([]), [])
+  const clear = useCallback(async () => {
+    if (!uid || activeIds.length === 0) return { ok: true }
+    const snapshot = [...activeIds]
+    setClearing(true)
+    setIds([])
+    try {
+      await clearWishlistInFirestore(uid)
+      return { ok: true }
+    } catch (err) {
+      console.warn('[wishlist] clear failed:', err?.message)
+      setIds(snapshot)
+      return { ok: false, error: err?.message || 'Could not clear wishlist.' }
+    } finally {
+      setClearing(false)
+    }
+  }, [uid, activeIds])
 
   const isInWishlist = useCallback(
     (productId) => activeIds.includes(productId),
@@ -103,9 +125,10 @@ export function WishlistProvider({ children }) {
       toggle,
       remove,
       clear,
+      clearing,
       isInWishlist,
     }),
-    [activeIds, items, toggle, remove, clear, isInWishlist]
+    [activeIds, items, toggle, remove, clear, clearing, isInWishlist]
   )
 
   return (

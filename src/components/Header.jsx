@@ -121,6 +121,7 @@ export default function Header() {
   const {
     goHome,
     goLogin,
+    goSignup,
     goSell,
     goWishlist,
     goMyAds,
@@ -159,7 +160,9 @@ export default function Header() {
 
         <div className="search-wrap" ref={searchRef}>
           <form className="search" onSubmit={handleSearchSubmit}>
-            <SearchIcon size={18} />
+            <span className="search-leading" aria-hidden>
+              <SearchIcon size={18} />
+            </span>
             <input
               type="search"
               placeholder="Find washing machines, dryers, and more…"
@@ -250,10 +253,18 @@ export default function Header() {
               onSell={goSell}
             />
           ) : (
-            <button type="button" className="hdr-login" onClick={goLogin}>
-              <UserIcon size={18} />
-              Login
-            </button>
+            <div className="hdr-auth">
+              <button type="button" className="hdr-auth-btn" onClick={goLogin}>
+                Login
+              </button>
+              <button
+                type="button"
+                className="hdr-auth-btn hdr-auth-btn-primary"
+                onClick={goSignup}
+              >
+                Sign up
+              </button>
+            </div>
           )}
         </div>
       </div>

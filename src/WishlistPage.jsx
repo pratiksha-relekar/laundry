@@ -4,14 +4,14 @@ import ProductCard from './components/ProductCard'
 import { ArrowLeftIcon, HeartIcon, TrashIcon } from './components/Icons'
 
 export default function WishlistPage() {
-  const { items, count, clear } = useWishlist()
+  const { items, count, clear, clearing } = useWishlist()
   const { goHome } = useNavigation()
 
   return (
     <div className="lx-page wishlist-page">
       <div className="lx-page-head">
         <button type="button" className="details-back" onClick={goHome}>
-          <ArrowLeftIcon size={16} /> Back to home
+          <ArrowLeftIcon size={16} /> Home
         </button>
 
         <div className="lx-page-title-row">
@@ -26,8 +26,13 @@ export default function WishlistPage() {
             </p>
           </div>
           {count > 0 && (
-            <button type="button" className="lx-page-clear" onClick={clear}>
-              <TrashIcon size={14} /> Clear all
+            <button
+              type="button"
+              className="lx-page-clear"
+              disabled={clearing}
+              onClick={() => clear()}
+            >
+              <TrashIcon size={14} /> {clearing ? 'Clearing…' : 'Clear all'}
             </button>
           )}
         </div>

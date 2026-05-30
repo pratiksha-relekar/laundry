@@ -9,7 +9,6 @@ import BottomAppBar from './components/BottomAppBar'
 import ProductDetailsPage from './ProductDetailsPage'
 import LoginPage from './LoginPage'
 import SignupPage from './SignupPage'
-import WishlistPage from './WishlistPage'
 import ChatsPage from './ChatsPage'
 import MyAdsPage from './MyAdsPage'
 import AccountPage from './AccountPage'
@@ -85,7 +84,7 @@ export default function DesktopView() {
   }
 
   let secondaryPage = null
-  if (view === 'wishlist') secondaryPage = <WishlistPage />
+  if (view === 'wishlist') secondaryPage = <MyAdsPage scrollToWishlist />
   else if (view === 'chats') secondaryPage = <ChatsPage />
   else if (view === 'my-ads') secondaryPage = <MyAdsPage />
   else if (view === 'account') secondaryPage = <AccountPage />
@@ -173,7 +172,7 @@ export default function DesktopView() {
         </>
       )}
 
-      {!onAuth && !onSecondary && <Footer />}
+      {!onSecondary && <Footer />}
 
       <BottomAppBar />
     </div>

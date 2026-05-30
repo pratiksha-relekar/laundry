@@ -121,7 +121,7 @@
 
 .search {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   border: 2px solid var(--search-border);
   border-radius: 4px;
   background: var(--bg);
@@ -135,21 +135,28 @@
 }
 
 .search-leading {
-  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 14px;
   color: var(--muted);
   flex-shrink: 0;
+  line-height: 0;
+}
+.search-leading svg {
+  display: block;
 }
 
 .search input {
   flex: 1;
   border: 0;
   outline: none;
-  padding: 0 12px;
+  padding: 10px 12px;
   font-size: 14px;
   background: transparent;
   color: var(--text);
   min-width: 0;
+  line-height: 1.4;
 }
 
 .search input::placeholder {
@@ -2694,6 +2701,48 @@
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
 }
 
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 22px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+}
+.auth-tab {
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.auth-tab:hover:not(.is-active) {
+  color: var(--text);
+  background: var(--hover);
+}
+.auth-tab.is-active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+.auth-tab:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.auth-name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
 .auth-header {
   text-align: center;
   margin-bottom: 24px;
@@ -2905,11 +2954,12 @@
   text-decoration: underline;
 }
 
-.auth-consent-status {
-  margin: -6px 0 14px;
-  color: var(--muted);
-  font-size: 12.5px;
+.auth-terms-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--danger);
   text-align: center;
+  line-height: 1.4;
 }
 
 /* Auth modal (Terms / Privacy) */
@@ -2970,15 +3020,37 @@
 }
 .auth-modal-check {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
   font-size: 13.5px;
   color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .auth-modal-check input {
-  width: 18px;
-  height: 18px;
-  margin-top: 2px;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 2px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.auth-modal-check input:checked {
+  background: var(--brand);
+  border-color: var(--brand);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.2 6.4 11 12.5 5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+}
+.auth-modal-check input:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 .auth-modal-actions {
   padding: 12px 16px 16px;
@@ -3001,6 +3073,40 @@
   text-decoration: underline;
 }
 
+.hdr-auth {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.hdr-auth-btn {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.hdr-auth-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--hover);
+}
+.hdr-auth-btn-primary {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
+.hdr-auth-btn-primary:hover {
+  background: var(--brand-dark);
+  border-color: var(--brand-dark);
+}
+
 @media (max-width: 480px) {
   .auth-card {
     padding: 24px 18px;
@@ -3008,6 +3114,15 @@
   }
   .auth-header h1 {
     font-size: 20px;
+  }
+  .auth-name-row {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .hdr-auth-btn {
+    height: 36px;
+    padding: 0 10px;
+    font-size: 12px;
   }
 }
 
@@ -3208,10 +3323,14 @@
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
-.lx-page-clear:hover {
+.lx-page-clear:hover:not(:disabled) {
   background: var(--danger-bg);
   border-color: var(--danger-border);
   color: var(--danger);
+}
+.lx-page-clear:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .lx-page-grid {
@@ -3937,12 +4056,63 @@
   background: var(--danger-bg);
 }
 
+.myads-loading {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.myads-section {
+  margin-bottom: 28px;
+}
+.myads-section-title {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+.myads-section-title svg {
+  color: var(--heart);
+}
+.myads-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.myads-section-head .myads-section-title {
+  margin-bottom: 0;
+}
+.myads-wishlist-section {
+  scroll-margin-top: 88px;
+}
+.myads-wishlist-empty h3 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
 .myads-empty {
   text-align: center;
   padding: 60px 24px;
   background: var(--bg);
   border: 1px dashed var(--border);
   border-radius: 12px;
+}
+.myads-empty h3 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
 }
 .myads-empty-icon {
   width: 80px;
@@ -4146,6 +4316,7 @@
   border-radius: 999px;
   min-width: 22px;
   text-align: center;
+  flex-shrink: 0;
 }
 .account-nav-item.active .account-nav-badge {
   background: var(--brand);

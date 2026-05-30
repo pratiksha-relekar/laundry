@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from './context/AuthContext'
 import { useNavigation } from './context/NavigationContext'
+import AuthTabs from './components/AuthTabs'
 import {
   ArrowLeftIcon,
   EyeIcon,
@@ -48,10 +49,12 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <button type="button" className="details-back auth-back" onClick={goHome}>
-        <ArrowLeftIcon size={16} /> Back to home
+        <ArrowLeftIcon size={16} /> Home
       </button>
 
       <div className="auth-card">
+        <AuthTabs />
+
         <div className="auth-header">
           <h1>Welcome back</h1>
           <p>Login to your NexDeal account to buy and sell appliances.</p>

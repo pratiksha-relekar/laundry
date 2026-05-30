@@ -16,7 +16,7 @@ function BecomeSellerPrompt({ user, onUpgrade, onBack, upgrading, error }) {
     <div className="lx-page sell-page">
       <div className="lx-page-head">
         <button type="button" className="details-back" onClick={onBack}>
-          <ArrowLeftIcon size={16} /> Back to home
+          <ArrowLeftIcon size={16} /> Home
         </button>
         <h1 className="lx-page-h1">Become a seller</h1>
       </div>
@@ -72,7 +72,7 @@ function SellLoginPrompt({ onLogin, onBack }) {
     <div className="lx-page sell-page">
       <div className="lx-page-head">
         <button type="button" className="details-back" onClick={onBack}>
-          <ArrowLeftIcon size={16} /> Back to home
+          <ArrowLeftIcon size={16} /> Home
         </button>
         <h1 className="lx-page-h1">Sell on NexDeal</h1>
       </div>
@@ -169,7 +169,7 @@ export default function SellPage() {
     <div className="lx-page sell-page">
       <div className="lx-page-head">
         <button type="button" className="details-back" onClick={goHome}>
-          <ArrowLeftIcon size={16} /> Back to home
+          <ArrowLeftIcon size={16} /> Home
         </button>
         <h1 className="lx-page-h1">Post your ad</h1>
         <p className="lx-page-sub">

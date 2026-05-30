@@ -214,7 +214,7 @@ export default function ChatsPage() {
     <div className={`lx-page chats-page ${activeId ? 'chats-thread-open' : ''}`}>
       <div className="lx-page-head">
         <button type="button" className="details-back" onClick={goHome}>
-          <ArrowLeftIcon size={16} /> Back to home
+          <ArrowLeftIcon size={16} /> Home
         </button>
 
         <div className="lx-page-title-row">

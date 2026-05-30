@@ -1,18 +1,24 @@
 import { useState } from 'react'
 import { useAuth } from './context/AuthContext'
 import { useNavigation } from './context/NavigationContext'
+import AuthTabs from './components/AuthTabs'
 import {
   ArrowLeftIcon,
   EyeIcon,
   EyeOffIcon,
   GoogleIcon,
 } from './components/Icons'
+import {
+  fullNameFromParts,
+  validateSignupFields,
+} from './utils/signupValidation'
 
 export default function SignupPage() {
   const { signup, loginGoogle } = useAuth()
   const { goHome, goLogin } = useNavigation()
 
-  const [fullName, setFullName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -29,15 +35,41 @@ export default function SignupPage() {
     setSubmitting(true)
     setErrors({})
 
-    if (!agreedTerms || !agreedPrivacy) {
+    const fieldErrors = validateSignupFields({
+      firstName,
+      lastName,
+      email,
+      password,
+      confirmPassword,
+    })
+
+    if (Object.keys(fieldErrors).length > 0) {
       setErrors({
-        form: 'Please accept Terms and Privacy Policy to continue.',
+        ...fieldErrors,
+        form:
+          Object.keys(fieldErrors).length > 1
+            ? 'Please fill in all required fields.'
+            : undefined,
       })
       setSubmitting(false)
       return
     }
 
-    const result = await signup({ fullName, email, password, confirmPassword })
+    if (!agreedTerms || !agreedPrivacy) {
+      setErrors({
+        terms: 'Please accept the Terms and Privacy Policy to continue.',
+      })
+      setSubmitting(false)
+      return
+    }
+
+    const fullName = fullNameFromParts(firstName, lastName)
+    const result = await signup({
+      fullName,
+      email,
+      password,
+      confirmPassword,
+    })
     if (!result.ok) {
       setErrors({ [result.field || 'form']: result.error })
       setSubmitting(false)
@@ -62,29 +94,47 @@ export default function SignupPage() {
   return (
     <div className="auth-page">
       <button type="button" className="details-back auth-back" onClick={goHome}>
-        <ArrowLeftIcon size={16} /> Back to home
+        <ArrowLeftIcon size={16} /> Home
       </button>
 
       <div className="auth-card">
+        <AuthTabs />
+
         <div className="auth-header">
           <h1>Create your account</h1>
           <p>Join NexDeal to buy and sell pre-owned washing & cleaning equipment.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          <label className={`auth-field ${errors.fullName ? 'has-error' : ''}`}>
-            <span className="auth-label">Full name</span>
-            <input
-              type="text"
-              autoComplete="name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Catherin Antonia"
-            />
-            {errors.fullName && (
-              <small className="auth-error">{errors.fullName}</small>
-            )}
-          </label>
+          <div className="auth-name-row">
+            <label className={`auth-field ${errors.firstName ? 'has-error' : ''}`}>
+              <span className="auth-label">First name</span>
+              <input
+                type="text"
+                autoComplete="given-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Catherin"
+              />
+              {errors.firstName && (
+                <small className="auth-error">{errors.firstName}</small>
+              )}
+            </label>
+
+            <label className={`auth-field ${errors.lastName ? 'has-error' : ''}`}>
+              <span className="auth-label">Last name</span>
+              <input
+                type="text"
+                autoComplete="family-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Antonia"
+              />
+              {errors.lastName && (
+                <small className="auth-error">{errors.lastName}</small>
+              )}
+            </label>
+          </div>
 
           <label className={`auth-field ${errors.email ? 'has-error' : ''}`}>
             <span className="auth-label">Email</span>
@@ -149,7 +199,9 @@ export default function SignupPage() {
           </label>
 
           {errors.form && (
-            <div className="auth-error auth-form-error">{errors.form}</div>
+            <div className="auth-error auth-form-error" role="alert">
+              {errors.form}
+            </div>
           )}
 
           <button type="submit" className="auth-submit" disabled={submitting}>
@@ -177,10 +229,9 @@ export default function SignupPage() {
           .
         </p>
 
-        {(agreedTerms || agreedPrivacy) && (
-          <p className="auth-consent-status">
-            {agreedTerms ? '✓ Terms' : 'Terms not accepted'} ·{' '}
-            {agreedPrivacy ? '✓ Privacy' : 'Privacy not accepted'}
+        {errors.terms && (
+          <p className="auth-terms-error" role="alert">
+            {errors.terms}
           </p>
         )}
 
@@ -211,13 +262,10 @@ export default function SignupPage() {
           className="auth-modal-overlay"
           role="dialog"
           aria-modal="true"
-          aria-label="Terms and privacy"
+          aria-label={consentModal === 'terms' ? 'Terms' : 'Privacy Policy'}
           onClick={() => setConsentModal(null)}
         >
-          <div
-            className="auth-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
             <div className="auth-modal-head">
               <h2 className="auth-modal-title">
                 {consentModal === 'terms' ? 'Terms' : 'Privacy Policy'}
@@ -239,7 +287,7 @@ export default function SignupPage() {
                   : 'This is a demo Privacy Policy screen. In production, link to your real Privacy page.'}
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {consentModal === 'terms' ? (
                 <label className="auth-modal-check">
                   <input
                     type="checkbox"
@@ -248,6 +296,7 @@ export default function SignupPage() {
                   />
                   <span>I agree to the Terms</span>
                 </label>
+              ) : (
                 <label className="auth-modal-check">
                   <input
                     type="checkbox"
@@ -256,7 +305,7 @@ export default function SignupPage() {
                   />
                   <span>I agree to the Privacy Policy</span>
                 </label>
-              </div>
+              )}
             </div>
 
             <div className="auth-modal-actions">

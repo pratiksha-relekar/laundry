@@ -44,7 +44,7 @@ export default function CategoryBrowsePage() {
       <div className="cat-browse-empty">
         <p>That category is not available.</p>
         <button type="button" className="auth-submit" onClick={goHome}>
-          Back to home
+          Home
         </button>
       </div>
     )
