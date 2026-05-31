@@ -1820,6 +1820,11 @@
     flex: 1 1 100%;
     max-width: none;
   }
+  .header-actions {
+    order: 2;
+    margin-left: auto;
+    gap: 8px;
+  }
   .search {
     min-height: 42px;
   }
@@ -1898,6 +1903,8 @@
     display: none;
   }
   .header-actions {
+    order: 2;
+    margin-left: auto;
     gap: 10px;
   }
   .sell-pill-inner {
@@ -5189,6 +5196,11 @@
   .hdr-icon-label {
     display: none;
   }
+  .header-actions {
+    order: 2;
+    margin-left: auto;
+    gap: 8px;
+  }
   .hdr-theme {
     width: 36px;
     height: 36px;
@@ -5202,7 +5214,8 @@
     padding: 10px 12px;
   }
   .logo {
-    flex-shrink: 0;
+    flex: 0 0 auto;
+    order: 1;
   }
   .logo-text {
     font-size: 20px;
@@ -5223,8 +5236,12 @@
   .search-wrap {
     order: 99;
     flex: 1 1 100%;
+    max-width: none;
   }
   .header-actions {
+    order: 2;
+    margin-left: auto;
+    flex: 0 0 auto;
     gap: 6px;
   }
   .header-actions .sell-pill {

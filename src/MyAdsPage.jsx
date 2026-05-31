@@ -128,7 +128,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
       <div className="lx-page myads-page">
         <div className="lx-page-head">
           <button type="button" className="details-back" onClick={goHome}>
-            <ArrowLeftIcon size={16} /> Back to listings
+            <ArrowLeftIcon size={16} /> Back to Home
           </button>
           <h1 className="lx-page-h1">My ADS</h1>
         </div>
@@ -144,7 +144,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
       <div className="lx-page myads-page">
         <div className="lx-page-head">
           <button type="button" className="details-back" onClick={goHome}>
-            <ArrowLeftIcon size={16} /> Back to listings
+            <ArrowLeftIcon size={16} /> Back to Home
           </button>
           <h1 className="lx-page-h1">My ADS</h1>
         </div>
@@ -152,7 +152,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
           <div className="myads-empty-icon" aria-hidden>
             <UserIcon size={36} />
           </div>
-          <h2>Login to see your ads</h2>
+          <h2>Login to see your ADS</h2>
           <p>Sign in to manage your listings and saved items.</p>
           <button type="button" className="auth-submit" onClick={goLogin}>
             Login or Sign up
@@ -166,7 +166,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
     <div className="lx-page myads-page">
       <div className="lx-page-head">
         <button type="button" className="details-back" onClick={goHome}>
-          <ArrowLeftIcon size={16} /> Back to listings
+          <ArrowLeftIcon size={16} /> Back to Home
         </button>
 
         <div className="lx-page-title-row">
@@ -174,7 +174,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
             <h1 className="lx-page-h1">My ADS</h1>
             <p className="lx-page-sub">
               {counts.all === 0
-                ? "You haven't posted any ads yet."
+                ? "You haven't posted any ADS yet."
                 : `${counts.all} listing${counts.all === 1 ? '' : 's'} · ${counts.active} active`}
               {wishlistCount > 0
                 ? ` · ${wishlistCount} saved`
@@ -182,7 +182,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
             </p>
           </div>
           <button type="button" className="myads-post" onClick={goSell}>
-            <PlusIcon size={16} /> Post a new Ads
+            <PlusIcon size={16} /> Post a new ADS
           </button>
         </div>
 
@@ -237,20 +237,20 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
             </div>
             <h3>
               {ads.length === 0
-                ? 'Post your first ad'
-                : 'No ads in this section'}
+                ? 'Post your first ADS'
+                : 'No ADS in this section'}
             </h3>
             <p>
               {ads.length === 0
                 ? 'Reach thousands of buyers across India in minutes. It only takes a minute to list your first product.'
-                : 'Switch to a different tab or Post a new Ads to get started.'}
+                : 'Switch to a different tab or post a new ADS to get started.'}
             </p>
             <button
               type="button"
               className="auth-submit"
               onClick={ads.length === 0 ? goSell : () => setTab('all')}
             >
-              {ads.length === 0 ? 'Post an ad' : 'View all ads'}
+              {ads.length === 0 ? 'Post an ADS' : 'View all ADS'}
             </button>
           </div>
         ) : (
