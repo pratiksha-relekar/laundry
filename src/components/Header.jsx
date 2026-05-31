@@ -5,7 +5,6 @@ import {
   HeartIcon,
   LogoutIcon,
   MoonIcon,
-  PinIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
@@ -151,12 +150,6 @@ export default function Header() {
     <header className="lx-header">
       <div className="lx-header-inner">
         <Logo onClick={goHome} />
-
-        <button type="button" className="loc-pill" aria-label="Change location">
-          <PinIcon size={18} />
-          <span className="loc-pill-text">India</span>
-          <ChevronDown size={16} />
-        </button>
 
         <div className="search-wrap" ref={searchRef}>
           <form className="search" onSubmit={handleSearchSubmit}>

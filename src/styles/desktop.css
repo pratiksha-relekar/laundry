@@ -2,7 +2,7 @@
    Laundry — desktop landing page styles
    ---------------------------------------------------------------------
    Layout closely follows OLX category listing page:
-   • white header with logo + location + search + actions
+   • white header with logo + search + actions
    • category nav strip with pills and date
    • popular searches row
    • hero ad banner
@@ -1721,7 +1721,7 @@
 .footer-grid {
   padding: 40px 20px 28px;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 24px 20px;
 }
 
@@ -2789,6 +2789,11 @@
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
 }
 .auth-forgot:hover {
   text-decoration: underline;
@@ -2864,16 +2869,82 @@
   margin-top: 4px;
 }
 
+.auth-reset-success {
+  text-align: center;
+  padding: 4px 0 0;
+}
+.auth-reset-success-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  background: var(--brand-tint);
+  color: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.auth-reset-success h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+}
+.auth-reset-success p {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.auth-reset-success p strong {
+  color: var(--text);
+  word-break: break-all;
+}
+.auth-reset-success .auth-submit {
+  margin-top: 0;
+}
+.auth-reset-waiting h2 {
+  margin-top: 0;
+}
+.auth-reset-banner {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--brand-tint, #eef4ff);
+  color: var(--brand, #2563eb);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.auth-submit-secondary {
+  background: transparent;
+  color: var(--brand);
+  border: 1px solid var(--brand);
+  width: 100%;
+}
+.auth-submit-secondary:hover {
+  background: var(--brand-tint);
+}
+
 .auth-submit {
-  height: 46px;
+  width: 100%;
+  min-width: 220px;
+  min-height: 48px;
+  height: auto;
+  padding: 12px 28px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--brand);
   color: #fff;
   font-weight: 700;
   font-size: 15px;
+  line-height: 1.25;
   cursor: pointer;
   margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  box-sizing: border-box;
   transition: background 0.15s ease, transform 0.15s ease;
 }
 .auth-submit:hover:not(:disabled) {
@@ -2909,8 +2980,10 @@
 
 .auth-google {
   width: 100%;
-  height: 46px;
-  border-radius: 8px;
+  min-height: 48px;
+  height: auto;
+  padding: 12px 28px;
+  border-radius: 10px;
   border: 1.5px solid var(--border);
   background: var(--bg);
   color: var(--text);
@@ -3018,6 +3091,17 @@
   font-size: 13.5px;
   line-height: 1.6;
 }
+.auth-modal-section + .auth-modal-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.auth-modal-section-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
 .auth-modal-check {
   display: flex;
   align-items: center;
@@ -3055,7 +3139,11 @@
 .auth-modal-actions {
   padding: 12px 16px 16px;
   display: flex;
-  justify-content: flex-end;
+}
+.auth-modal-actions .auth-submit {
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
 }
 
 .auth-switch {
@@ -3385,9 +3473,10 @@
   line-height: 1.5;
 }
 .wishlist-empty-cta {
-  max-width: 240px;
+  width: 100%;
+  max-width: 360px;
   margin: 0 auto;
-  display: block;
+  display: flex;
 }
 
 /* =====================================================================
@@ -3820,13 +3909,15 @@
 .myads-post {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   background: var(--brand);
   color: #fff;
   border: none;
   font-weight: 700;
   font-size: 13px;
-  padding: 9px 14px;
+  min-height: 44px;
+  padding: 10px 20px;
   border-radius: 999px;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -4139,9 +4230,10 @@
   line-height: 1.5;
 }
 .myads-empty .auth-submit {
-  max-width: 240px;
+  width: 100%;
+  max-width: 360px;
   margin: 0 auto;
-  display: block;
+  display: flex;
 }
 
 @media (max-width: 720px) {
@@ -4499,7 +4591,8 @@
 .account-form-actions .auth-google,
 .account-form-actions .auth-submit {
   width: auto;
-  min-width: 140px;
+  min-width: 180px;
+  flex: 1 1 auto;
 }
 
 /* ----- Toggles ----- */
@@ -4588,8 +4681,9 @@
   color: var(--muted);
 }
 .account-card-btn {
-  width: auto !important;
-  min-width: 160px;
+  width: 100% !important;
+  max-width: 360px;
+  min-width: 220px;
   white-space: nowrap;
   text-align: center;
   display: inline-flex !important;
@@ -4936,12 +5030,12 @@
 
 .sell-submit-row {
   display: flex;
-  justify-content: flex-end;
+  justify-content: stretch;
   padding: 8px 0 16px;
 }
 .sell-submit {
-  width: auto;
-  min-width: 200px;
+  width: 100%;
+  min-width: 220px;
 }
 
 /* Success and onboarding states */
@@ -5024,9 +5118,10 @@
   color: var(--success-strong);
 }
 .seller-onboarding-cta {
-  max-width: 260px;
+  width: 100%;
+  max-width: 360px;
   margin: 0 auto;
-  display: block;
+  display: flex;
 }
 
 @media (max-width: 640px) {
@@ -5481,7 +5576,8 @@
 .auth-admin {
   width: 100%;
   margin-top: 10px;
-  padding: 11px 14px;
+  min-height: 48px;
+  padding: 12px 28px;
   border-radius: 10px;
   border: 1px dashed var(--border-strong);
   background: var(--bg);
@@ -6246,9 +6342,11 @@
 .admin-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  height: 40px;
-  padding: 0 16px;
+  min-height: 44px;
+  height: auto;
+  padding: 10px 20px;
   border-radius: 10px;
   font-weight: 700;
   font-size: 13.5px;

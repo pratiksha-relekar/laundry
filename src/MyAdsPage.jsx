@@ -128,7 +128,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
       <div className="lx-page myads-page">
         <div className="lx-page-head">
           <button type="button" className="details-back" onClick={goHome}>
-            <ArrowLeftIcon size={16} /> Home
+            <ArrowLeftIcon size={16} /> Back to listings
           </button>
           <h1 className="lx-page-h1">My ADS</h1>
         </div>
@@ -144,7 +144,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
       <div className="lx-page myads-page">
         <div className="lx-page-head">
           <button type="button" className="details-back" onClick={goHome}>
-            <ArrowLeftIcon size={16} /> Home
+            <ArrowLeftIcon size={16} /> Back to listings
           </button>
           <h1 className="lx-page-h1">My ADS</h1>
         </div>
@@ -166,7 +166,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
     <div className="lx-page myads-page">
       <div className="lx-page-head">
         <button type="button" className="details-back" onClick={goHome}>
-          <ArrowLeftIcon size={16} /> Home
+          <ArrowLeftIcon size={16} /> Back to listings
         </button>
 
         <div className="lx-page-title-row">
@@ -182,7 +182,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
             </p>
           </div>
           <button type="button" className="myads-post" onClick={goSell}>
-            <PlusIcon size={16} /> Post a new ad
+            <PlusIcon size={16} /> Post a new Ads
           </button>
         </div>
 
@@ -243,7 +243,7 @@ export default function MyAdsPage({ scrollToWishlist = false }) {
             <p>
               {ads.length === 0
                 ? 'Reach thousands of buyers across India in minutes. It only takes a minute to list your first product.'
-                : 'Switch to a different tab or post a new ad to get started.'}
+                : 'Switch to a different tab or Post a new Ads to get started.'}
             </p>
             <button
               type="button"

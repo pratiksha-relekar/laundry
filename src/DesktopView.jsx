@@ -101,7 +101,11 @@ export default function DesktopView() {
 
       {onAuth ? (
         <main className="lx-main lx-main-auth">
-          {view === 'login' ? <LoginPage /> : <SignupPage />}
+          {view === 'login' ? (
+            <LoginPage />
+          ) : (
+            <SignupPage />
+          )}
         </main>
       ) : onSecondary ? (
         <main className="lx-main lx-main-secondary">{secondaryPage}</main>

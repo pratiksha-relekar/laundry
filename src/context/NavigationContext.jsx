@@ -29,7 +29,9 @@ import { categoryMap } from '../data/categories'
 //   #wishlist          — saved items
 //   #chats             — chats inbox + thread
 //   #my-ads            — current user's listings
-//   #account           — account hub
+//   #account           — account hub (profile)
+//   #account/help      — help & support section
+//   #account/settings  — account settings section
 //   #sell              — post-an-ad form
 //   #edit-ad/<id>      — edit one of your listings
 //   #admin-login       — admin sign-in screen
@@ -61,33 +63,34 @@ const KNOWN_VIEWS = new Set([
   'admin-settings',
 ])
 
+const ACCOUNT_SECTIONS = new Set(['profile', 'settings', 'help'])
+
+function emptyRoute(overrides = {}) {
+  return {
+    view: 'home',
+    productId: null,
+    categoryId: null,
+    subcategorySlug: null,
+    accountSection: null,
+    ...overrides,
+  }
+}
+
 /**
- * Parse `window.location.hash` into
- * `{ view, productId, categoryId, subcategorySlug }`.
+ * Parse `window.location.hash` into route state.
  * Unknown hashes fall back to the home view so bad URLs never break the app.
  */
 function parseHash(hash) {
   const raw = (hash || '').replace(/^#\/?/, '').trim()
-  if (!raw) {
-    return { view: 'home', productId: null, categoryId: null, subcategorySlug: null }
-  }
+  if (!raw) return emptyRoute()
+
   if (raw.startsWith('details/')) {
     const id = decodeURIComponent(raw.slice('details/'.length))
-    return {
-      view: 'details',
-      productId: id || null,
-      categoryId: null,
-      subcategorySlug: null,
-    }
+    return emptyRoute({ view: 'details', productId: id || null })
   }
   if (raw.startsWith('edit-ad/')) {
     const id = decodeURIComponent(raw.slice('edit-ad/'.length))
-    return {
-      view: 'edit-ad',
-      productId: id || null,
-      categoryId: null,
-      subcategorySlug: null,
-    }
+    return emptyRoute({ view: 'edit-ad', productId: id || null })
   }
   if (raw.startsWith('category/')) {
     const parts = raw.slice('category/'.length).split('/')
@@ -96,27 +99,26 @@ function parseHash(hash) {
       ? decodeURIComponent(parts[1])
       : null
     if (categoryMap[categoryId]) {
-      return {
-        view: 'category',
-        productId: null,
-        categoryId,
-        subcategorySlug,
-      }
+      return emptyRoute({ view: 'category', categoryId, subcategorySlug })
+    }
+  }
+  if (raw.startsWith('account/')) {
+    const section = decodeURIComponent(raw.slice('account/'.length))
+    if (ACCOUNT_SECTIONS.has(section)) {
+      return emptyRoute({ view: 'account', accountSection: section })
     }
   }
   if (KNOWN_VIEWS.has(raw)) {
-    return {
+    return emptyRoute({
       view: raw,
-      productId: null,
-      categoryId: null,
-      subcategorySlug: null,
-    }
+      accountSection: raw === 'account' ? 'profile' : null,
+    })
   }
-  return { view: 'home', productId: null, categoryId: null, subcategorySlug: null }
+  return emptyRoute()
 }
 
 /** Inverse of `parseHash`. Home stays as an empty hash so `/` is clean. */
-function buildHash(view, productId, categoryId, subcategorySlug) {
+function buildHash(view, productId, categoryId, subcategorySlug, accountSection) {
   if (view === 'home') return ''
   if (view === 'details' && productId) {
     return '#details/' + encodeURIComponent(productId)
@@ -131,6 +133,12 @@ function buildHash(view, productId, categoryId, subcategorySlug) {
     }
     return hash
   }
+  if (view === 'account') {
+    if (accountSection && accountSection !== 'profile') {
+      return '#account/' + encodeURIComponent(accountSection)
+    }
+    return '#account'
+  }
   return '#' + view
 }
 
@@ -141,35 +149,34 @@ function scrollTop() {
 }
 
 function readInitial() {
-  if (typeof window === 'undefined') {
-    return {
-      view: 'home',
-      productId: null,
-      categoryId: null,
-      subcategorySlug: null,
-    }
-  }
+  if (typeof window === 'undefined') return emptyRoute()
   return parseHash(window.location.hash)
 }
 
 export function NavigationProvider({ children }) {
-  // Single state object keeps view + productId in lock-step and lets us
-  // initialise both from the URL hash with one lazy call.
   const [route, setRoute] = useState(readInitial)
-  const { view, productId, categoryId, subcategorySlug } = route
+  const { view, productId, categoryId, subcategorySlug, accountSection } = route
   // Guards the hashchange listener so internally-triggered hash writes
   // don't accidentally cause a redundant state update.
   const internalWrite = useRef(false)
 
   // ---- hash write helpers ------------------------------------------
   const writeHash = useCallback(
-    (nextView, nextProductId, nextCategoryId, nextSubSlug, replace = false) => {
+    (
+      nextView,
+      nextProductId,
+      nextCategoryId,
+      nextSubSlug,
+      nextAccountSection,
+      replace = false
+    ) => {
       if (typeof window === 'undefined') return
       const target = buildHash(
         nextView,
         nextProductId,
         nextCategoryId,
-        nextSubSlug
+        nextSubSlug,
+        nextAccountSection
       )
       const current = window.location.hash || ''
       if (current === target) return
@@ -194,15 +201,25 @@ export function NavigationProvider({ children }) {
       nextView,
       nextProductId = null,
       nextCategoryId = null,
-      nextSubcategorySlug = null
+      nextSubcategorySlug = null,
+      nextAccountSection = null
     ) => {
+      const section =
+        nextView === 'account' ? nextAccountSection || 'profile' : null
       setRoute({
         view: nextView,
         productId: nextProductId,
         categoryId: nextCategoryId,
         subcategorySlug: nextSubcategorySlug,
+        accountSection: section,
       })
-      writeHash(nextView, nextProductId, nextCategoryId, nextSubcategorySlug)
+      writeHash(
+        nextView,
+        nextProductId,
+        nextCategoryId,
+        nextSubcategorySlug,
+        section
+      )
       scrollTop()
     },
     [writeHash]
@@ -212,20 +229,31 @@ export function NavigationProvider({ children }) {
   // On first mount: normalize the URL so e.g. visiting `#garbage`
   // rewrites it to `#home` (or strips it entirely for home).
   useEffect(() => {
-    writeHash(route.view, route.productId, route.categoryId, route.subcategorySlug, true)
+    writeHash(
+      route.view,
+      route.productId,
+      route.categoryId,
+      route.subcategorySlug,
+      route.accountSection,
+      true
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Sync state ← URL whenever the hash changes (browser back/forward,
   // manual edits, link clicks with `href="#..."`).
   useEffect(() => {
-    function onHashChange() {
+    function syncRouteFromUrl() {
       if (internalWrite.current) return
       setRoute(parseHash(window.location.hash))
       scrollTop()
     }
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
+    window.addEventListener('hashchange', syncRouteFromUrl)
+    window.addEventListener('popstate', syncRouteFromUrl)
+    return () => {
+      window.removeEventListener('hashchange', syncRouteFromUrl)
+      window.removeEventListener('popstate', syncRouteFromUrl)
+    }
   }, [])
 
   // ---- public actions -----------------------------------------------
@@ -250,7 +278,18 @@ export function NavigationProvider({ children }) {
   const goWishlist = useCallback(() => navigate('wishlist'), [navigate])
   const goChats = useCallback(() => navigate('chats'), [navigate])
   const goMyAds = useCallback(() => navigate('my-ads'), [navigate])
-  const goAccount = useCallback(() => navigate('account'), [navigate])
+  const goAccount = useCallback(
+    () => navigate('account', null, null, null, 'profile'),
+    [navigate]
+  )
+  const goAccountHelp = useCallback(
+    () => navigate('account', null, null, null, 'help'),
+    [navigate]
+  )
+  const goAccountSection = useCallback(
+    (section) => navigate('account', null, null, null, section),
+    [navigate]
+  )
   const goSell = useCallback(() => navigate('sell'), [navigate])
   const goEditAd = useCallback(
     (id) => navigate('edit-ad', id, null, null),
@@ -285,6 +324,7 @@ export function NavigationProvider({ children }) {
       productId,
       categoryId,
       subcategorySlug,
+      accountSection,
       openProduct,
       goHome,
       goCategory,
@@ -295,6 +335,8 @@ export function NavigationProvider({ children }) {
       goChats,
       goMyAds,
       goAccount,
+      goAccountHelp,
+      goAccountSection,
       goSell,
       goEditAd,
       goAdminLogin,
@@ -310,6 +352,7 @@ export function NavigationProvider({ children }) {
       productId,
       categoryId,
       subcategorySlug,
+      accountSection,
       openProduct,
       goHome,
       goCategory,
@@ -320,6 +363,8 @@ export function NavigationProvider({ children }) {
       goChats,
       goMyAds,
       goAccount,
+      goAccountHelp,
+      goAccountSection,
       goSell,
       goEditAd,
       goAdminLogin,

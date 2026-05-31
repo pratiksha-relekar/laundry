@@ -26,9 +26,8 @@ export default function SignupPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
-  const [consentModal, setConsentModal] = useState(null) // 'terms' | 'privacy' | null
-  const [agreedTerms, setAgreedTerms] = useState(false)
-  const [agreedPrivacy, setAgreedPrivacy] = useState(false)
+  const [showConsentModal, setShowConsentModal] = useState(false)
+  const [agreedPolicies, setAgreedPolicies] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -55,7 +54,7 @@ export default function SignupPage() {
       return
     }
 
-    if (!agreedTerms || !agreedPrivacy) {
+    if (!agreedPolicies) {
       setErrors({
         terms: 'Please accept the Terms and Privacy Policy to continue.',
       })
@@ -214,17 +213,9 @@ export default function SignupPage() {
           <button
             type="button"
             className="auth-link-btn"
-            onClick={() => setConsentModal('terms')}
+            onClick={() => setShowConsentModal(true)}
           >
-            Terms
-          </button>{' '}
-          and{' '}
-          <button
-            type="button"
-            className="auth-link-btn"
-            onClick={() => setConsentModal('privacy')}
-          >
-            Privacy Policy
+            Terms and Privacy Policy
           </button>
           .
         </p>
@@ -257,62 +248,71 @@ export default function SignupPage() {
         </p>
       </div>
 
-      {consentModal && (
+      {showConsentModal && (
         <div
           className="auth-modal-overlay"
           role="dialog"
           aria-modal="true"
-          aria-label={consentModal === 'terms' ? 'Terms' : 'Privacy Policy'}
-          onClick={() => setConsentModal(null)}
+          aria-label="Terms and Privacy Policy"
+          onClick={() => setShowConsentModal(false)}
         >
           <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
             <div className="auth-modal-head">
-              <h2 className="auth-modal-title">
-                {consentModal === 'terms' ? 'Terms' : 'Privacy Policy'}
-              </h2>
+              <h2 className="auth-modal-title">Terms and Privacy Policy</h2>
               <button
                 type="button"
                 className="auth-modal-close"
                 aria-label="Close"
-                onClick={() => setConsentModal(null)}
+                onClick={() => setShowConsentModal(false)}
               >
                 ×
               </button>
             </div>
 
             <div className="auth-modal-body">
-              <p className="auth-modal-text">
-                {consentModal === 'terms'
-                  ? 'This is a demo Terms of Service screen. In production, link to your real Terms page.'
-                  : 'This is a demo Privacy Policy screen. In production, link to your real Privacy page.'}
-              </p>
+              <section className="auth-modal-section">
+                <h3 className="auth-modal-section-title">Terms of Service</h3>
+                <p className="auth-modal-text">
+                  By joining NexDeal you agree to buy and sell pre-owned laundry
+                  and cleaning equipment honestly, keep listings accurate, and
+                  communicate respectfully with other users.
+                </p>
+                <p className="auth-modal-text">
+                  NexDeal is a marketplace only—we do not inspect items or handle
+                  payments; you are responsible for your deals, and we may suspend
+                  accounts that break these rules or misuse the platform.
+                </p>
+              </section>
 
-              {consentModal === 'terms' ? (
-                <label className="auth-modal-check">
-                  <input
-                    type="checkbox"
-                    checked={agreedTerms}
-                    onChange={(e) => setAgreedTerms(e.target.checked)}
-                  />
-                  <span>I agree to the Terms</span>
-                </label>
-              ) : (
-                <label className="auth-modal-check">
-                  <input
-                    type="checkbox"
-                    checked={agreedPrivacy}
-                    onChange={(e) => setAgreedPrivacy(e.target.checked)}
-                  />
-                  <span>I agree to the Privacy Policy</span>
-                </label>
-              )}
+              <section className="auth-modal-section">
+                <h3 className="auth-modal-section-title">Privacy Policy</h3>
+                <p className="auth-modal-text">
+                  We use your name, email, profile details, listings, chats, and
+                  activity to run your account, match buyers with sellers, and keep
+                  NexDeal safe.
+                </p>
+                <p className="auth-modal-text">
+                  We do not sell your data; it is shared only to show your ads,
+                  enable messaging, and meet legal requirements—you can review or
+                  update your information anytime in My Account.
+                </p>
+              </section>
+
+              <label className="auth-modal-check">
+                <input
+                  type="checkbox"
+                  checked={agreedPolicies}
+                  onChange={(e) => setAgreedPolicies(e.target.checked)}
+                />
+                <span>I agree to the Terms and Privacy Policy</span>
+              </label>
             </div>
 
             <div className="auth-modal-actions">
               <button
                 type="button"
                 className="auth-submit"
-                onClick={() => setConsentModal(null)}
+                onClick={() => setShowConsentModal(false)}
               >
                 Done
               </button>

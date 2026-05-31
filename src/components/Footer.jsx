@@ -42,8 +42,8 @@ function FooterLink({ children, onClick }) {
 }
 
 export default function Footer() {
-  const { view, goHome, goCategory, goSell, goMyAds, goAccount } = useNavigation()
-  const hideFollowUs = view === 'signup' || view === 'login'
+  const { goHome, goCategory, goSell, goMyAds, goAccount, goAccountHelp } =
+    useNavigation()
 
   const shopCategories = categories.slice(0, 4)
   const moreCategories = categories.slice(4)
@@ -79,19 +79,10 @@ export default function Footer() {
           <FooterColumn title={`Sell on ${BRAND_NAME}`}>
             <FooterLink onClick={goSell}>Post your machine for free</FooterLink>
             <FooterLink onClick={goMyAds}>My ADS</FooterLink>
-            <FooterLink onClick={goAccount}>My account</FooterLink>
+            <FooterLink onClick={goAccount}>My Account</FooterLink>
             <FooterLink onClick={goHome}>Browse all listings</FooterLink>
-            <FooterLink onClick={goAccount}>Help &amp; support</FooterLink>
+            <FooterLink onClick={goAccountHelp}>Help &amp; support</FooterLink>
           </FooterColumn>
-
-          {!hideFollowUs && (
-            <FooterColumn title="Follow us">
-              <FooterLink onClick={() => {}}>Facebook</FooterLink>
-              <FooterLink onClick={() => {}}>Instagram</FooterLink>
-              <FooterLink onClick={() => {}}>Twitter</FooterLink>
-              <FooterLink onClick={() => {}}>YouTube</FooterLink>
-            </FooterColumn>
-          )}
         </div>
 
         <div className="footer-bottom">

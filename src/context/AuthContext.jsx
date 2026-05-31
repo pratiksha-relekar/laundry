@@ -257,8 +257,6 @@ export function AuthProvider({ children }) {
         if (isMounted.current) {
           setUser((prev) => prev || optimisticUserFromAuth(cred.user))
         }
-        // Background: stamp lastLoginAt on the email-keyed doc and
-        // pull / migrate the full profile.
         touchLastLogin(emailKey(cred.user.email)).catch(() => {})
         hydrateUser(cred.user).catch(() => {})
         return { ok: true }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from './context/AuthContext'
 import { useNavigation } from './context/NavigationContext'
 import { useWishlist } from './context/WishlistContext'
@@ -361,21 +361,41 @@ export default function AccountPage() {
     goWishlist,
     goChats,
     goSell,
+    accountSection,
+    goAccountSection,
   } = useNavigation()
   const { count: wishlistCount } = useWishlist()
   const { chats, totalUnread } = useChats()
   const chatCount = chats.length
   const { count: adsCount } = useUserAds()
-  const [section, setSection] = useState('profile')
+  const [section, setSection] = useState(accountSection || 'profile')
+
+  useEffect(() => {
+    if (accountSection) setSection(accountSection)
+  }, [accountSection])
 
   if (!user) {
+    if (section === 'help') {
+      return (
+        <div className="lx-page account-page">
+          <div className="lx-page-head">
+            <button type="button" className="details-back" onClick={goHome}>
+              <ArrowLeftIcon size={16} /> Home
+            </button>
+            <h1 className="lx-page-h1">Help &amp; support</h1>
+          </div>
+          <HelpSection />
+        </div>
+      )
+    }
+
     return (
       <div className="lx-page account-page">
         <div className="lx-page-head">
           <button type="button" className="details-back" onClick={goHome}>
             <ArrowLeftIcon size={16} /> Home
           </button>
-          <h1 className="lx-page-h1">My account</h1>
+          <h1 className="lx-page-h1">My Account</h1>
         </div>
         <div className="myads-empty">
           <div className="myads-empty-icon" aria-hidden>
@@ -401,11 +421,11 @@ export default function AccountPage() {
         </button>
         <div className="lx-page-title-row">
           <div>
-            <h1 className="lx-page-h1">My account</h1>
+            <h1 className="lx-page-h1">My Account</h1>
             <p className="lx-page-sub">Welcome back, {user.fullName.split(' ')[0]}.</p>
           </div>
           <button type="button" className="myads-post" onClick={goSell}>
-            <PlusIcon size={16} /> Post a new ad
+            <PlusIcon size={16} /> Post a new Ads
           </button>
         </div>
       </div>
@@ -438,7 +458,10 @@ export default function AccountPage() {
                   key={s.id}
                   type="button"
                   className={`account-nav-item ${active ? 'active' : ''}`}
-                  onClick={() => setSection(s.id)}
+                  onClick={() => {
+                    setSection(s.id)
+                    goAccountSection(s.id)
+                  }}
                 >
                   <Icon size={16} /> {s.label}
                 </button>

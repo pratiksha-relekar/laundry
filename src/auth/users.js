@@ -492,6 +492,16 @@ export function mapFirebaseAuthError(err) {
         error:
           'Too many failed attempts. Try again later or reset your password.',
       }
+    case 'auth/expired-action-code':
+      return {
+        field: 'form',
+        error: 'This reset link has expired. Go to login and request a new one.',
+      }
+    case 'auth/invalid-action-code':
+      return {
+        field: 'form',
+        error: 'This reset link is invalid or already used. Request a new one from login.',
+      }
     case 'auth/user-disabled':
       return {
         field: 'form',

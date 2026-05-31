@@ -43,7 +43,7 @@ export default function ProductDetailsPage({ productId }) {
       <div className="details-not-found">
         <p>That listing isn't available.</p>
         <button type="button" onClick={goHome} className="details-back">
-          Back to listings
+          <ArrowLeftIcon size={16} /> Back to home
         </button>
       </div>
     )
@@ -79,7 +79,7 @@ export default function ProductDetailsPage({ productId }) {
     <div className="details-page">
       <div className="lx-breadcrumb-wrap">
         <button type="button" className="details-back" onClick={goHome}>
-          <ArrowLeftIcon size={16} /> Back to listings
+          <ArrowLeftIcon size={16} /> Back to home
         </button>
         <div className="lx-breadcrumb details-breadcrumb">
           <a href="#" onClick={(e) => { e.preventDefault(); goHome() }}>Home</a>

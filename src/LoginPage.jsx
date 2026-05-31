@@ -74,16 +74,7 @@ export default function LoginPage() {
           </label>
 
           <label className={`auth-field ${errors.password ? 'has-error' : ''}`}>
-            <span className="auth-label">
-              Password
-              <a
-                href="#"
-                className="auth-forgot"
-                onClick={(e) => e.preventDefault()}
-              >
-                Forgot password?
-              </a>
-            </span>
+            <span className="auth-label">Password</span>
             <div className="auth-input-wrap">
               <input
                 type={showPw ? 'text' : 'password'}
