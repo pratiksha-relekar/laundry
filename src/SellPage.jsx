@@ -158,7 +158,7 @@ export default function SellPage() {
           <div className="sell-success-icon" aria-hidden>
             <CheckIcon size={36} />
           </div>
-          <h2>Your ad is live!</h2>
+          <h2>Your ADS is live!</h2>
           <p>Buyers can now find it on NexDeal. Taking you to My ADS…</p>
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function SellPage() {
         <button type="button" className="details-back" onClick={goHome}>
           <ArrowLeftIcon size={16} /> Home
         </button>
-        <h1 className="lx-page-h1">Post your ad</h1>
+        <h1 className="lx-page-h1">Post Your ADS</h1>
         <p className="lx-page-sub">
           Fill out the details below — we'll publish it instantly.
         </p>
@@ -183,6 +183,7 @@ export default function SellPage() {
           phone: user?.phone || '',
         }}
         onSubmit={handleSubmit}
+        submitLabel="Post Your ADS"
       />
     </div>
   )

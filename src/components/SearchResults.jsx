@@ -1,22 +1,8 @@
 import { useSearch } from '../context/SearchContext'
 import { popularSearches } from '../data/categories'
+import { budgetFilterLabel } from '../utils/productFilters'
 import ProductCard from './ProductCard'
 import { CloseIcon, SearchIcon } from './Icons'
-
-function formatPrice(n) {
-  if (n == null) return ''
-  if (n >= 100000) return `₹${(n / 100000).toFixed(n % 100000 === 0 ? 0 : 1)}L`
-  if (n >= 1000) return `₹${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`
-  return `₹${n}`
-}
-
-function budgetLabel(minPrice, maxPrice) {
-  if (minPrice != null && maxPrice != null)
-    return `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`
-  if (minPrice != null) return `Above ${formatPrice(minPrice)}`
-  if (maxPrice != null) return `Under ${formatPrice(maxPrice)}`
-  return ''
-}
 
 export default function SearchResults() {
   const {
@@ -87,7 +73,7 @@ export default function SearchResults() {
         {hasBudget && (
           <span className="active-filter">
             <span className="active-filter-label">Budget:</span>
-            <strong>{budgetLabel(minPrice, maxPrice)}</strong>
+            <strong>{budgetFilterLabel(minPrice, maxPrice)}</strong>
             <button
               type="button"
               aria-label="Remove budget filter"
@@ -121,7 +107,7 @@ export default function SearchResults() {
             {hasBudget && (
               <>
                 {' in '}
-                <strong>{budgetLabel(minPrice, maxPrice)}</strong>
+                <strong>{budgetFilterLabel(minPrice, maxPrice)}</strong>
               </>
             )}
           </h3>

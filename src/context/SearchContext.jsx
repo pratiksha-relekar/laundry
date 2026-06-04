@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { categoryMap } from '../data/categories'
+import { filterProductsList } from '../utils/productFilters'
 import { useProducts } from './ProductsContext'
 
 // =====================================================================
@@ -35,14 +35,6 @@ const SearchContext = createContext(null)
 const STORAGE_KEY = 'laundry.recentSearches'
 const MAX_RECENT = 8
 
-// Drop these from the user's query so phrases like "washing machine
-// by Pratiksha" still match a listing titled "Washing Machine" sold by
-// "Pratiksha" — the word "by" shouldn't have to appear anywhere.
-const STOPWORDS = new Set([
-  'a', 'an', 'and', 'at', 'by', 'for', 'from', 'in', 'is', 'of',
-  'on', 'or', 'the', 'to', 'with',
-])
-
 function readStored() {
   if (typeof window === 'undefined') return []
   try {
@@ -52,42 +44,6 @@ function readStored() {
   } catch {
     return []
   }
-}
-
-// Builds a single lower-cased haystack string from all the fields we want
-// to search across (title, brand, seller, description, category, location).
-function haystackFor(product) {
-  const catName = categoryMap[product.category]?.name || ''
-  return [
-    product.title,
-    product.brand,
-    product.location,
-    product.category,
-    catName,
-    product.seller?.name,
-    product.description,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-}
-
-function matchesText(product, q) {
-  if (!q) return true
-  const tokens = q
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((t) => t && !STOPWORDS.has(t))
-  if (tokens.length === 0) return true
-  const hay = haystackFor(product)
-  // All non-stopword tokens must appear somewhere in the haystack.
-  return tokens.every((t) => hay.includes(t))
-}
-
-function matchesBudget(product, minPrice, maxPrice) {
-  if (minPrice != null && product.price < minPrice) return false
-  if (maxPrice != null && product.price > maxPrice) return false
-  return true
 }
 
 export function SearchProvider({ children }) {
@@ -170,10 +126,11 @@ export function SearchProvider({ children }) {
 
   const filteredProducts = useMemo(() => {
     if (!isFiltering) return allProducts
-    const q = submittedQuery.trim()
-    return allProducts.filter(
-      (p) => matchesText(p, q) && matchesBudget(p, minPrice, maxPrice)
-    )
+    return filterProductsList(allProducts, {
+      query: submittedQuery,
+      minPrice,
+      maxPrice,
+    })
   }, [submittedQuery, minPrice, maxPrice, isFiltering, allProducts])
 
   const value = useMemo(
